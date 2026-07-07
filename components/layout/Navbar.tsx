@@ -132,7 +132,7 @@ export default function Navbar() {
                   key={`mobile-link-${idx}`}
                   href={item.link}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-neutral-600 hover:text-black font-semibold text-sm transition-colors py-1"
+                  className="text-gray-900 hover:text-gray-600 font-semibold text-sm transition-colors py-1"
                 >
                   {item.name}
                 </Link>
