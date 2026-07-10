@@ -1,0 +1,52 @@
+type Order @entity {
+  id: ID!
+  orderId: BigInt!
+  maker: Bytes!
+  isBuy: Boolean!
+  active: Boolean!
+  tokenIn: Bytes!
+  tokenOut: Bytes!
+  amountIn: BigInt!
+  remainingIn: BigInt!
+  startPrice: BigInt!
+  slope: BigInt!
+  minPrice: BigInt!
+  maxPrice: BigInt!
+  createdAt: BigInt!
+  expiry: BigInt!
+  pair: Pair!
+  user: User!
+}
+
+type Settlement @entity {
+  id: ID!
+  buyOrder: Order!
+  sellOrder: Order!
+  keeper: Bytes!
+  settlementPrice: BigInt!
+  executedQuantity: BigInt!
+  timestamp: BigInt!
+}
+
+type Pair @entity {
+  id: ID!
+  tokenA: Bytes!
+  tokenB: Bytes!
+  volume: BigInt!
+  orderCount: Int!
+  orders: [Order!]! @derivedFrom(field: "pair")
+}
+
+type User @entity {
+  id: ID!
+  orderCount: Int!
+  orders: [Order!]! @derivedFrom(field: "user")
+}
+
+type Protocol @entity {
+  id: ID!
+  treasury: Bytes
+  protocolFeeBps: BigInt
+  owner: Bytes
+  paused: Boolean!
+}

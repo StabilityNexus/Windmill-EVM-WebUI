@@ -1,0 +1,32 @@
+{
+  "mainnet": {
+    "WindmillExchange": {
+      "address": "",
+      "startBlock": 0
+    }
+  },
+  "sepolia": {
+    "WindmillExchange": {
+      "address": "",
+      "startBlock": 0
+    }
+  },
+  "base": {
+    "WindmillExchange": {
+      "address": "",
+      "startBlock": 0
+    }
+  },
+  "polygon": {
+    "WindmillExchange": {
+      "address": "",
+      "startBlock": 0
+    }
+  },
+  "arbitrum": {
+    "WindmillExchange": {
+      "address": "",
+      "startBlock": 0
+    }
+  }
+}

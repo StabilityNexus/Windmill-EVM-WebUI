@@ -346,6 +346,11 @@ TSWLatexianTemp*
 # production
 /build
 
+# subgraph
+/subgraph/node_modules/
+/subgraph/build/
+/subgraph/generated/
+
 # misc
 .DS_Store
 *.pem
