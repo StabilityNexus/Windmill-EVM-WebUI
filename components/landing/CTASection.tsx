@@ -17,7 +17,7 @@ export default function CTASection() {
       <div className="mx-auto max-w-4xl px-6 md:px-8 relative z-10">
         <div className="reveal-scale relative rounded-3xl border border-black/10 bg-black px-8 py-14 md:py-20 text-center flex flex-col items-center justify-center overflow-hidden shadow-2xl">
           {/* Radial ambient background light */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.1),transparent_75%)] pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(255,197,23,0.15),transparent_75%)] pointer-events-none" />
 
           {/* Heading */}
           <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-4 max-w-xl leading-tight text-white">
@@ -35,7 +35,7 @@ export default function CTASection() {
               href="https://github.com/StabilityNexus/Windmill-EVM-Contracts"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-11 w-full sm:w-auto items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-black transition-all duration-300 hover:bg-neutral-100 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0"
+              className="inline-flex h-11 w-full sm:w-auto items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-black transition-all duration-300 hover:bg-[#ffc517] hover:text-black hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#ffc517]/20 active:translate-y-0"
             >
               Launch Platform
             </a>
