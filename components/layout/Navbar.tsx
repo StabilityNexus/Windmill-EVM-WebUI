@@ -13,6 +13,7 @@ import {
   MobileNavMenu,
   NavbarButton,
 } from '@/components/ui/resizable-navbar';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Navbar() {
   const { isConnected, address, network, setWalletModalOpen, disconnectWallet, switchNetwork } = useWallet();
@@ -48,6 +49,12 @@ export default function Navbar() {
 
           {/* Desktop Nav Items */}
           <NavItems items={navItems} />
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
 
           {/* Wallet Actions / RainbowKit simulation */}
           <div className="flex items-center gap-3 shrink-0 ml-6">
@@ -135,6 +142,13 @@ export default function Navbar() {
                   {item.name}
                 </Link>
               ))}
+
+              <div className="h-[1px] bg-neutral-100 my-2" />
+
+              {/* Theme Toggle */}
+              <div className="flex justify-center">
+                <ThemeToggle />
+              </div>
 
               <div className="h-[1px] bg-neutral-100 my-2" />
 
