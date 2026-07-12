@@ -42,13 +42,13 @@ export default function FeaturesSection() {
     <section
       id="features"
       ref={containerRef}
-      className="bg-white section-padding border-t border-black/5"
+      className="bg-background text-foreground section-padding border-t border-border"
     >
       <div className="mx-auto max-w-4xl px-6 md:px-8">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-16 flex flex-col items-center">
           <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-3">Protocol Features</h2>
-          <p className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight">
+          <p className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight leading-tight">
             Designed for Decentralized Liquidity and Matchmaking
           </p>
         </div>
@@ -62,12 +62,12 @@ export default function FeaturesSection() {
               style={{ transitionDelay: `${idx * 150}ms` }}
               className="reveal-3d feature-card-white flex flex-col sm:flex-row gap-6 items-start"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-50 border border-neutral-200 shadow-sm transition-transform duration-300 hover:rotate-6">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm transition-transform duration-300 hover:rotate-6">
                 {renderIcon(feature.icon)}
               </div>
               <div className="flex-1 flex flex-col gap-2">
-                <h3 className="text-base font-bold text-black">{feature.title}</h3>
-                <p className="text-neutral-500 text-xs sm:text-sm leading-relaxed">{feature.description}</p>
+                <h3 className="text-base font-bold text-foreground">{feature.title}</h3>
+                <p className="text-neutral-500 dark:text-neutral-400 text-xs sm:text-sm leading-relaxed">{feature.description}</p>
               </div>
             </div>
           ))}

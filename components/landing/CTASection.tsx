@@ -9,13 +9,13 @@ export default function CTASection() {
     <section
       id="cta"
       ref={containerRef}
-      className="bg-white section-padding border-t border-black/5 relative overflow-hidden"
+      className="bg-background text-foreground section-padding border-t border-border relative overflow-hidden"
     >
       {/* Background Decorators */}
       <div className="absolute inset-0 hero-grid-pattern opacity-[0.2] pointer-events-none" />
 
       <div className="mx-auto max-w-4xl px-6 md:px-8 relative z-10">
-        <div className="reveal-scale relative rounded-3xl border border-black/10 bg-black px-8 py-14 md:py-20 text-center flex flex-col items-center justify-center overflow-hidden shadow-2xl">
+        <div className="reveal-scale relative rounded-3xl border border-black/10 dark:border-white/10 bg-black dark:bg-neutral-900 px-8 py-14 md:py-20 text-center flex flex-col items-center justify-center overflow-hidden shadow-2xl">
           {/* Radial ambient background light */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(255,197,23,0.15),transparent_75%)] pointer-events-none" />
 
@@ -35,7 +35,7 @@ export default function CTASection() {
               href="https://github.com/StabilityNexus/Windmill-EVM-Contracts"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-11 w-full sm:w-auto items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-black transition-all duration-300 hover:bg-[#ffc517] hover:text-black hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#ffc517]/20 active:translate-y-0"
+              className="inline-flex h-11 w-full sm:w-auto items-center justify-center rounded-full bg-white dark:bg-[#ffc517] px-8 text-sm font-semibold text-black transition-all duration-300 hover:bg-[#ffc517] dark:hover:bg-white hover:text-black hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#ffc517]/20 active:translate-y-0"
             >
               Launch Platform
             </a>

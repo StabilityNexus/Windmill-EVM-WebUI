@@ -26,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("scroll-smooth", "font-sans", geist.variable)} suppressHydrationWarning>
-      <body className={`${inter.variable} antialiased min-h-screen bg-background text-foreground`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={cn("scroll-smooth", "font-sans", geist.variable, inter.variable, "antialiased", "min-h-screen", "bg-background", "text-foreground")}>
         <WalletProvider>
           <ThemeProvider>
             <Navbar />

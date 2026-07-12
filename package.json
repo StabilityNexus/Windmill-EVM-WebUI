@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "-": "^0.0.1-security.1",
     "clsx": "^2.1.1",
+    "codex": "^0.2.3",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.24.0",
     "next": "16.1.6",

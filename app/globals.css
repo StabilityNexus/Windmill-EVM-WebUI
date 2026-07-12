@@ -1,13 +1,15 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 /* ═══════════════════════════════════════════════════════════════
    WINDMILL EXCHANGE — Design System
    Premium Black & White Theme (White Background)
    ═══════════════════════════════════════════════════════════════ */
 
 @theme inline {
-  --color-background: #ffffff;
-  --color-foreground: #0a0a0a;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
   --color-brand: #ffc517;
   --color-brand-dark: #e5b015;
   --color-brand-green: #228b22;
@@ -59,8 +61,8 @@ html {
 }
 
 body {
-  background-color: #ffffff;
-  color: #0a0a0a;
+  background-color: var(--background);
+  color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -78,20 +80,20 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #ffffff;
+  background: var(--background);
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d4;
+  background: var(--border);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a3a3a3;
+  background: var(--muted-foreground);
 }
 
 /* ── Premium Background patterns ───────────────────────────────── */
 
 .bg-light-mesh {
-  background-image: radial-gradient(circle, #e5e5e5 1.5px, transparent 1.5px);
+  background-image: radial-gradient(circle, var(--mesh-dot) 1.5px, transparent 1.5px);
   background-size: 32px 32px;
 }
 
@@ -110,6 +112,11 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(0, 0, 0, 0.06);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.dark .glass-pill {
+  background: rgba(10, 10, 10, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* ── 3D Scroll Reveal Animations ───────────────────────────────── */
@@ -234,19 +241,22 @@ body {
   justify-content: center;
   gap: 8px;
   padding: 12px 28px;
-  background: #0a0a0a;
-  color: #ffffff;
+  background: var(--foreground);
+  color: var(--background);
   font-weight: 600;
   font-size: 0.875rem;
   border-radius: 9999px;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease, color 0.3s ease;
   cursor: pointer;
   border: 1px solid transparent;
 }
 .btn-premium-dark:hover {
-  background: #262626;
+  opacity: 0.9;
   transform: translateY(-2px);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+.dark .btn-premium-dark:hover {
+  box-shadow: 0 10px 25px rgba(255, 255, 255, 0.05);
 }
 
 .btn-premium-light {
@@ -256,28 +266,31 @@ body {
   gap: 8px;
   padding: 12px 28px;
   background: transparent;
-  color: #0a0a0a;
+  color: var(--foreground);
   font-weight: 600;
   font-size: 0.875rem;
   border-radius: 9999px;
-  border: 1px solid #e5e5e5;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--border);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
   cursor: pointer;
 }
 .btn-premium-light:hover {
-  border-color: #0a0a0a;
+  border-color: var(--foreground);
   background: rgba(0, 0, 0, 0.02);
   transform: translateY(-2px);
+}
+.dark .btn-premium-light:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 /* ── Card Styling ──────────────────────────────────────────────── */
 
 .feature-card-white {
-  background: #ffffff;
-  border: 1px solid #f0f0f0;
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 32px;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease, border-color 0.3s ease;
 }
 .feature-card-white:hover {
   border-color: #ffc517;
@@ -318,6 +331,7 @@ body {
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --mesh-dot: #e5e5e5;
 }
 
 .dark {
@@ -352,6 +366,7 @@ body {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --mesh-dot: #262626;
 }
 
 @layer base {

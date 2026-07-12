@@ -75,9 +75,9 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
       }}
       className={cn(
-        'relative z-[60] mx-auto hidden w-full flex-row items-center justify-between rounded-full px-6 py-2.5 lg:flex',
+        'relative z-[60] mx-auto hidden w-full flex-row items-center justify-between rounded-full px-6 py-2.5 xl:flex',
         visible 
-          ? 'w-[70%] max-w-4xl bg-white/85 backdrop-blur-xl border border-black/5 shadow-md translate-y-4' 
+          ? 'w-[70%] max-w-4xl bg-white/85 dark:bg-neutral-900/85 backdrop-blur-xl border border-black/5 dark:border-white/5 shadow-md translate-y-4' 
           : 'w-full max-w-5xl bg-transparent border border-transparent translate-y-0',
         className
       )}
@@ -94,7 +94,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
     <div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        'absolute inset-0 hidden flex-row items-center justify-center space-x-1 text-xs font-semibold text-neutral-500 transition duration-200 lg:flex pointer-events-none',
+        'flex flex-row items-center justify-center space-x-1 text-xs font-semibold text-neutral-500 transition duration-200 pointer-events-auto',
         className
       )}
     >
@@ -102,12 +102,12 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
         <Link
           onMouseEnter={() => setHovered(idx)}
           onClick={onItemClick}
-          className="relative px-4 py-2 text-neutral-400 hover:text-black transition-colors duration-200 pointer-events-auto"
+          className="relative px-4 py-2 text-neutral-400 dark:text-neutral-500 hover:text-black dark:hover:text-white transition-colors duration-200 pointer-events-auto"
           key={`link-${idx}`}
           href={item.link}
         >
           {hovered === idx && (
-            <div className="absolute inset-0 h-full w-full rounded-full bg-neutral-100/70 z-0 animate-fade-in" />
+            <div className="absolute inset-0 h-full w-full rounded-full bg-neutral-100/70 dark:bg-neutral-800/70 z-0 animate-fade-in" />
           )}
           <span className="relative z-10 uppercase tracking-wider text-[10px] font-bold">{item.name}</span>
         </Link>
@@ -123,9 +123,9 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
       }}
       className={cn(
-        'relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-4 py-3.5 lg:hidden rounded-full',
+        'relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-4 py-3.5 xl:hidden rounded-full',
         visible 
-          ? 'w-[85%] bg-white/85 backdrop-blur-xl border border-black/5 shadow-md translate-y-4' 
+          ? 'w-[85%] bg-white/85 dark:bg-neutral-900/85 backdrop-blur-xl border border-black/5 dark:border-white/5 shadow-md translate-y-4' 
           : 'w-full bg-transparent border border-transparent translate-y-0',
         className
       )}
@@ -149,7 +149,7 @@ export const MobileNavMenu = ({ children, className, isOpen }: MobileNavMenuProp
   return (
     <div
       className={cn(
-        'absolute inset-x-0 top-16 z-50 flex w-full flex-col items-start justify-start gap-4 rounded-3xl bg-white border border-black/5 p-6 shadow-xl animate-dropdown-enter',
+        'absolute inset-x-0 top-16 z-50 flex w-full flex-col items-start justify-start gap-4 rounded-3xl bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/5 p-6 shadow-xl animate-dropdown-enter',
         className
       )}
     >
@@ -160,13 +160,13 @@ export const MobileNavMenu = ({ children, className, isOpen }: MobileNavMenuProp
 
 export const MobileNavToggle = ({ isOpen, onClick }: { isOpen: boolean; onClick: () => void }) => {
   return (
-    <button onClick={onClick} className="p-1 cursor-pointer">
+    <button onClick={onClick} className="p-1 cursor-pointer text-foreground">
       {isOpen ? (
-        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       ) : (
-        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
         </svg>
       )}
@@ -176,9 +176,9 @@ export const MobileNavToggle = ({ isOpen, onClick }: { isOpen: boolean; onClick:
 
 export const NavbarLogo = () => {
   return (
-    <Link href="/" className="relative z-20 flex items-center space-x-2 px-2 py-1 text-sm font-bold text-black">
-      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-white text-xs">W</div>
-      <span className="font-semibold text-black">WINDMILL</span>
+    <Link href="/" className="relative z-20 flex items-center space-x-2 px-2 py-1 text-sm font-bold text-foreground">
+      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold">W</div>
+      <span className="font-semibold text-foreground">WINDMILL</span>
     </Link>
   );
 };
@@ -201,9 +201,9 @@ export const NavbarButton = ({
     'px-4 py-2 rounded-full text-xs font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center select-none';
 
   const variantStyles = {
-    primary: 'bg-white text-black border border-black/5 shadow-sm hover:bg-neutral-50',
-    secondary: 'bg-transparent text-neutral-600 hover:text-black border border-transparent',
-    dark: 'bg-black text-white hover:bg-neutral-800 border border-transparent shadow-sm',
+    primary: 'bg-white dark:bg-neutral-900 text-black dark:text-white border border-black/5 dark:border-white/5 shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800',
+    secondary: 'bg-transparent text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white border border-transparent',
+    dark: 'bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 border border-transparent shadow-sm',
     gradient: 'bg-gradient-to-b from-neutral-800 to-black text-white shadow-sm border border-transparent',
   };
 

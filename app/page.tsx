@@ -5,7 +5,7 @@ import WalletModal from '@/components/wallet/WalletModal';
 
 export default function Home() {
   return (
-    <main className="w-full flex flex-col bg-white text-black min-h-screen">
+    <main className="w-full flex flex-col bg-background text-foreground min-h-screen">
       {/* Simulated RainbowKit wallet connection modal */}
       <WalletModal />
 
