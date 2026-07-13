@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -94,7 +94,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
     <div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        'absolute inset-0 hidden flex-row items-center justify-center space-x-1 text-xs font-semibold text-neutral-500 transition duration-200 lg:flex pointer-events-none',
+        'absolute inset-0 hidden flex-row items-center justify-center space-x-1 text-xs font-semibold text-neutral-700 transition duration-200 lg:flex pointer-events-none',
         className
       )}
     >
@@ -102,7 +102,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
         <Link
           onMouseEnter={() => setHovered(idx)}
           onClick={onItemClick}
-          className="relative px-4 py-2 text-neutral-400 hover:text-black transition-colors duration-200 pointer-events-auto"
+          className="relative px-4 py-2 text-neutral-700 hover:text-black transition-colors duration-200 pointer-events-auto"
           key={`link-${idx}`}
           href={item.link}
         >
@@ -185,7 +185,7 @@ export const NavbarLogo = () => {
 
 export const NavbarButton = ({
   href,
-  as: Tag = 'a',
+  as: Tag = href ? 'a' : 'button',
   children,
   className,
   variant = 'primary',
@@ -207,13 +207,21 @@ export const NavbarButton = ({
     gradient: 'bg-gradient-to-b from-neutral-800 to-black text-white shadow-sm border border-transparent',
   };
 
+  const TagElement = Tag as React.ComponentType<{
+    href?: string;
+    type?: string;
+    className?: string;
+    children?: React.ReactNode;
+  }>;
+
   return (
-    <Tag
-      href={href || undefined}
+    <TagElement
+      href={Tag === 'a' ? href || undefined : undefined}
+      type={Tag === 'button' ? 'button' : undefined}
       className={cn(baseStyles, variantStyles[variant], className)}
       {...props}
     >
       {children}
-    </Tag>
+    </TagElement>
   );
 };

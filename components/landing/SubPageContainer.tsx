@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
+import FAQContent from '../support/FAQContent';
+import SupportForm from '../support/SupportForm';
 
 interface SubPageContainerProps {
   activeTab: string;
@@ -8,24 +10,9 @@ interface SubPageContainerProps {
 }
 
 export default function SubPageContainer({ activeTab, setActiveTab }: SubPageContainerProps) {
-  const [ticketSubject, setTicketSubject] = useState('');
-  const [ticketDesc, setTicketDesc] = useState('');
-  const [ticketSubmitted, setTicketSubmitted] = useState(false);
-
   if (activeTab === 'home' || activeTab === 'how-it-works' || activeTab === 'stats') {
     return null;
   }
-
-  const handleSupportSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ticketSubject || !ticketDesc) return;
-    setTicketSubmitted(true);
-    setTimeout(() => {
-      setTicketSubmitted(false);
-      setTicketSubject('');
-      setTicketDesc('');
-    }, 3000);
-  };
 
   return (
     <section className="relative min-h-[70vh] py-32 px-6 bg-neutral-950 text-white flex flex-col justify-start border-t border-white/5">
@@ -139,73 +126,8 @@ export default function SubPageContainer({ activeTab, setActiveTab }: SubPageCon
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 items-start">
-              {/* FAQ Section */}
-              <div className="flex flex-col gap-4">
-                <h3 className="text-lg font-bold">Frequently Asked Questions</h3>
-                <div className="flex flex-col gap-4 text-sm text-neutral-400">
-                  <div>
-                    <h4 className="font-semibold text-white">How are dynamic curves executed?</h4>
-                    <p className="mt-1 text-xs leading-relaxed">
-                      Orders specify starting prices and linear slopes. Buyers decrease bids; sellers increase asks, driving convergence.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-white">Is there a transaction fee?</h4>
-                    <p className="mt-1 text-xs leading-relaxed">
-                      Yes. A flat 0.1% keeper fee is deducted on settlement and rewarded to the solver node to cover gas.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-white">Are contracts audited?</h4>
-                    <p className="mt-1 text-xs leading-relaxed">
-                      The protocol architecture has been mathematically verified, and code review is active within Stability Nexus.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Support Form */}
-              <div className="border border-white/5 bg-white/[0.01] rounded-3xl p-6">
-                <h3 className="text-lg font-bold mb-4">Open Support Ticket</h3>
-                {ticketSubmitted ? (
-                  <div className="text-center py-10">
-                    <span className="text-3xl">✉️</span>
-                    <h4 className="text-md font-semibold text-emerald-400 mt-4">Ticket Submitted!</h4>
-                    <p className="text-xs text-neutral-400 mt-2">We will get back to you within 24 hours.</p>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSupportSubmit} className="flex flex-col gap-4 text-xs font-semibold uppercase tracking-wider">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-neutral-500">Subject</label>
-                      <input
-                        type="text"
-                        required
-                        value={ticketSubject}
-                        onChange={(e) => setTicketSubject(e.target.value)}
-                        className="rounded-xl border border-white/10 bg-white/5 p-3 text-white normal-case font-normal focus:outline-none focus:border-white/35"
-                        placeholder="Curve query, matching issues..."
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-neutral-500">Details</label>
-                      <textarea
-                        rows={4}
-                        required
-                        value={ticketDesc}
-                        onChange={(e) => setTicketDesc(e.target.value)}
-                        className="rounded-xl border border-white/10 bg-white/5 p-3 text-white normal-case font-normal focus:outline-none focus:border-white/35 resize-none"
-                        placeholder="Provide details..."
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="mt-2 w-full rounded-full bg-white py-3 text-center text-xs font-bold text-black uppercase hover:bg-neutral-200 transition-colors"
-                    >
-                      Submit Ticket
-                    </button>
-                  </form>
-                )}
-              </div>
+              <FAQContent theme="dark" />
+              <SupportForm theme="dark" />
             </div>
           </div>
         )}
