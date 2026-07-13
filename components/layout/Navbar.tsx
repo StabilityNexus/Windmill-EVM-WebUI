@@ -62,6 +62,7 @@ export default function Navbar() {
                 {/* Network select indicator */}
                 <div className="relative">
                   <button
+                    type="button"
                     onClick={() => setNetworkDropdownOpen(!networkDropdownOpen)}
                     className="flex items-center gap-1.5 rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 px-3 py-1.5 text-[10px] font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors uppercase tracking-wider text-foreground cursor-pointer"
                   >
@@ -73,6 +74,7 @@ export default function Navbar() {
                       {networks.map((net) => (
                         <button
                           key={net}
+                          type="button"
                           onClick={() => {
                             switchNetwork(net);
                             setNetworkDropdownOpen(false);
@@ -131,9 +133,9 @@ export default function Navbar() {
             className="bg-white/95 dark:bg-neutral-900/95 border border-neutral-100/50 dark:border-neutral-800 backdrop-blur-xl p-6 rounded-2xl shadow-xl mt-4"
           >
             <div className="flex flex-col gap-4 w-full">
-              {navItems.map((item, idx) => (
+              {navItems.map((item) => (
                 <Link
-                  key={`mobile-link-${idx}`}
+                  key={item.name}
                   href={item.link}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white font-semibold text-sm transition-colors py-1"

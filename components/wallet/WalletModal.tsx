@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useWallet } from '@/context/WalletContext';
 
 export default function WalletModal() {
@@ -12,6 +12,16 @@ export default function WalletModal() {
     connectWallet,
   } = useWallet();
 
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isConnecting) setWalletModalOpen(false);
+    };
+    if (walletModalOpen) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [walletModalOpen, isConnecting, setWalletModalOpen]);
+
   if (!walletModalOpen) return null;
 
   const wallets = [
@@ -22,7 +32,12 @@ export default function WalletModal() {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="wallet-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    >
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -33,8 +48,9 @@ export default function WalletModal() {
       <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-card p-6 text-foreground shadow-2xl transition-all duration-300">
         {/* Modal Header */}
         <div className="mb-6 flex items-center justify-between">
-          <h3 className="text-xl font-bold tracking-tight">Connect a Wallet</h3>
+          <h3 id="wallet-modal-title" className="text-xl font-bold tracking-tight">Connect a Wallet</h3>
           <button
+            type="button"
             onClick={() => !isConnecting && setWalletModalOpen(false)}
             disabled={isConnecting}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer"
@@ -64,6 +80,7 @@ export default function WalletModal() {
             {wallets.map((wallet) => (
               <button
                 key={wallet.name}
+                type="button"
                 onClick={() => connectWallet(wallet.name)}
                 className="flex w-full items-center gap-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 p-4 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 transition-all duration-200 group active:scale-[0.99] cursor-pointer"
               >

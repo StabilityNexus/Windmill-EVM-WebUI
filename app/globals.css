@@ -380,3 +380,24 @@ body {
     @apply font-sans;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-3d,
+  .reveal-3d-flip,
+  .reveal-fade-up,
+  .reveal-scale {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .text-reveal-1,
+  .text-reveal-2,
+  .text-reveal-3,
+  .text-reveal-4,
+  .animate-float,
+  .animate-float-delayed,
+  .animate-pulse-slow {
+    animation: none;
+  }
+}

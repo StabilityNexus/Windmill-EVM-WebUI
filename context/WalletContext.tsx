@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
 interface WalletContextType {
   isConnected: boolean;
@@ -25,7 +25,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [network, setNetwork] = useState('Ethereum');
   const [walletModalOpen, setWalletModalOpen] = useState(false);
 
-  const connectWallet = async (walletName: string) => {
+  const connectWallet = useCallback(async (walletName: string) => {
     setIsConnecting(true);
     setConnectingWallet(walletName);
     // Simulate dynamic connection delay
@@ -41,32 +41,35 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setIsConnecting(false);
     setConnectingWallet(null);
     setWalletModalOpen(false);
-  };
+  }, []);
 
-  const disconnectWallet = () => {
+  const disconnectWallet = useCallback(() => {
     setIsConnected(false);
     setAddress(null);
     setNetwork('Ethereum');
-  };
+  }, []);
 
-  const switchNetwork = (newNetwork: string) => {
+  const switchNetwork = useCallback((newNetwork: string) => {
     setNetwork(newNetwork);
-  };
+  }, []);
 
   return (
     <WalletContext.Provider
-      value={{
-        isConnected,
-        isConnecting,
-        connectingWallet,
-        address,
-        network,
-        walletModalOpen,
-        setWalletModalOpen,
-        connectWallet,
-        disconnectWallet,
-        switchNetwork,
-      }}
+      value={useMemo(
+        () => ({
+          isConnected,
+          isConnecting,
+          connectingWallet,
+          address,
+          network,
+          walletModalOpen,
+          setWalletModalOpen,
+          connectWallet,
+          disconnectWallet,
+          switchNetwork,
+        }),
+        [isConnected, isConnecting, connectingWallet, address, network, walletModalOpen, connectWallet, disconnectWallet, switchNetwork]
+      )}
     >
       {children}
     </WalletContext.Provider>
