@@ -8,6 +8,10 @@
 @theme inline {
   --color-background: #ffffff;
   --color-foreground: #0a0a0a;
+  --color-brand: #ffc517;
+  --color-brand-dark: #e5b015;
+  --color-brand-green: #228b22;
+  --color-brand-green-light: #22c55e;
   --font-sans: var(--font-sans);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -234,7 +238,9 @@ body {
   font-weight: 600;
   font-size: 0.875rem;
   border-radius: 9999px;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   border: 1px solid transparent;
 }
@@ -256,7 +262,9 @@ body {
   font-size: 0.875rem;
   border-radius: 9999px;
   border: 1px solid #e5e5e5;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 }
 .btn-premium-light:hover {
@@ -272,7 +280,9 @@ body {
   border: 1px solid #f0f0f0;
   border-radius: 16px;
   padding: 32px;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .feature-card-white:hover {
   border-color: #d4d4d4;
@@ -469,4 +479,25 @@ body {
 
 .hw__sticker {
   display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-3d,
+  .reveal-3d-flip,
+  .reveal-fade-up,
+  .reveal-scale {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .text-reveal-1,
+  .text-reveal-2,
+  .text-reveal-3,
+  .text-reveal-4,
+  .animate-float,
+  .animate-float-delayed,
+  .animate-pulse-slow {
+    animation: none;
+  }
 }
