@@ -21,4 +21,8 @@ export interface Step {
 export interface Stat {
   label: string;
   value: string;
+  illustrative?: boolean;
+  icon?: string;
+  bgClass?: string;
+  textClass?: string;
 }

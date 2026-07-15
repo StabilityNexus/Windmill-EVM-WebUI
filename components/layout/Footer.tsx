@@ -91,7 +91,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-neutral-900 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-neutral-500" suppressHydrationWarning>
             &copy; {new Date().getFullYear()} Stability Nexus. All rights reserved.
           </p>
           <div className="flex gap-6">

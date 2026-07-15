@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useWallet } from '@/context/WalletContext';
 import WalletModal from '@/components/wallet/WalletModal';
 
@@ -20,6 +20,7 @@ interface Order {
 export default function DashboardPage() {
   const { isConnected, setWalletModalOpen } = useWallet();
   const [orderType, setOrderType] = useState<'Buy' | 'Sell'>('Buy');
+  const nextIdRef = useRef(3000);
   const [tokenIn, setTokenIn] = useState('WETH');
   const [tokenOut, setTokenOut] = useState('USDC');
   const [amount, setAmount] = useState<number>(1);
@@ -29,6 +30,7 @@ export default function DashboardPage() {
 
   // Initial mock orders
   const [orders, setOrders] = useState<Order[]>([]);
+  const activeOrders = useMemo(() => orders.filter((o) => o.active), [orders]);
 
   const [settledHistory, setSettledHistory] = useState([
     { id: 182, pair: 'WETH/USDC', amount: '0.80', price: '$3,150.00', age: '15 mins ago' },
@@ -97,7 +99,7 @@ export default function DashboardPage() {
     setIsSubmitting(true);
     setTimeout(() => {
       const newOrder: Order = {
-        id: Math.floor(Math.random() * 9000) + 1000,
+        id: nextIdRef.current++,
         type: orderType,
         tokenIn,
         tokenOut,
@@ -195,8 +197,9 @@ export default function DashboardPage() {
               {/* Tokens In/Out */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[9px] text-neutral-400">Token In</label>
+                  <label htmlFor="token-in-select" className="text-[9px] text-neutral-400">Token In</label>
                   <select
+                    id="token-in-select"
                     value={tokenIn}
                     onChange={(e) => setTokenIn(e.target.value)}
                     className="border border-neutral-200 bg-white p-2.5 rounded-xl text-black font-normal"
@@ -208,8 +211,9 @@ export default function DashboardPage() {
                   </select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[9px] text-neutral-400">Token Out</label>
+                  <label htmlFor="token-out-select" className="text-[9px] text-neutral-400">Token Out</label>
                   <select
+                    id="token-out-select"
                     value={tokenOut}
                     onChange={(e) => setTokenOut(e.target.value)}
                     className="border border-neutral-200 bg-white p-2.5 rounded-xl text-black font-normal"
@@ -224,8 +228,9 @@ export default function DashboardPage() {
 
               {/* Amount */}
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] text-neutral-400">Amount</label>
+                <label htmlFor="amount-input" className="text-[9px] text-neutral-400">Amount</label>
                 <input
+                  id="amount-input"
                   type="number"
                   step="0.01"
                   required
@@ -238,8 +243,9 @@ export default function DashboardPage() {
 
               {/* Starting Price */}
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] text-neutral-400">Start Price ($)</label>
+                <label htmlFor="start-price-input" className="text-[9px] text-neutral-400">Start Price ($)</label>
                 <input
+                  id="start-price-input"
                   type="number"
                   step="0.1"
                   required
@@ -252,8 +258,9 @@ export default function DashboardPage() {
 
               {/* Price Slope */}
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] text-neutral-400">Slope ($/sec)</label>
+                <label htmlFor="slope-input" className="text-[9px] text-neutral-400">Slope ($/sec)</label>
                 <input
+                  id="slope-input"
                   type="number"
                   step="0.001"
                   required
@@ -283,11 +290,10 @@ export default function DashboardPage() {
             <div className="border border-neutral-100 rounded-3xl p-6 bg-white shadow-sm w-full">
               <h2 className="text-lg font-bold text-black mb-4">Your Dynamic Orders</h2>
               <div className="flex flex-col gap-4">
-                {orders.filter((o) => o.active).length === 0 ? (
+                {activeOrders.length === 0 ? (
                   <p className="text-neutral-400 text-xs py-6 text-center">No active dynamic orders deployed.</p>
                 ) : (
-                  orders
-                    .filter((o) => o.active)
+                  activeOrders
                     .map((order) => (
                       <div
                         key={order.id}

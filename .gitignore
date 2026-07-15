@@ -366,12 +366,3 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Windmill EVM WebUI temporary page overrides to keep PR small
-/app/how-it-works/
-/app/keepers/
-/app/stats/
-/app/docs/
-/app/about/
-/app/support/
-/components/landing/HowItWorksSection.tsx
-/components/landing/StatsSection.tsx
