@@ -3,10 +3,9 @@ import { Inter, Geist } from 'next/font/google';
 import './globals.css';
 import { WalletProvider } from '@/context/WalletContext';
 import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 const inter = Inter({
   variable: '--font-inter',
@@ -25,17 +24,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("scroll-smooth", "font-sans", geist.variable)}>
-      <body className={`${inter.variable} antialiased min-h-screen bg-white text-black`}>
+    <html lang="en" className={cn("scroll-smooth font-sans", geist.variable, inter.variable)}>
+      <body className="antialiased min-h-screen bg-white text-neutral-900">
         <WalletProvider>
           <Navbar />
-          {children}
-          <Footer />
+          <main>{children}</main>
         </WalletProvider>
       </body>
     </html>
   );
 }
-
-
-
