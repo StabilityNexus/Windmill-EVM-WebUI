@@ -2,32 +2,38 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { motion, Variants } from 'framer-motion';
+import { motion, Variants, useReducedMotion } from 'framer-motion';
 import StatsPanel from '@/components/landing/StatsPanel';
 import { t } from '@/lib/i18n';
-
-// ─── Animation Variants ─────────────────────────────────────────
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.12, delayChildren: 0.15 },
-  },
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
-  },
-};
 
 // ─── Component ──────────────────────────────────────────────────
 
 export default function HeroSection() {
+  const shouldReduceMotion = useReducedMotion();
+
+  // ─── Animation Variants ─────────────────────────────────────────
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: shouldReduceMotion
+        ? { duration: 0.5 }
+        : { staggerChildren: 0.12, delayChildren: 0.15 },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 24 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: shouldReduceMotion
+        ? { duration: 0.5 }
+        : { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
+    },
+  };
+
   return (
     <section
       id="home"
@@ -52,7 +58,7 @@ export default function HeroSection() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 2L12 22M2 12L22 12M5 5L19 19M5 19L19 5" />
             </svg>
-            Your multi-chain trading terminal.
+            {t.hero.pill}
           </motion.div>
 
           {/* ── Heading ──────────────────────────────────────── */}
@@ -60,7 +66,7 @@ export default function HeroSection() {
             variants={itemVariants}
             className="text-5xl sm:text-6xl md:text-7xl lg:text-[80px] font-extrabold tracking-tight text-neutral-950 max-w-4xl leading-[1.05] mb-6 drop-shadow-md"
           >
-            Dynamic cross-chain swaps. Powered by Keepers.
+            {t.hero.heading1} {t.hero.heading2}
           </motion.h1>
 
           {/* ── Description ──────────────────────────────────── */}
@@ -69,7 +75,7 @@ export default function HeroSection() {
             className="bg-white/50 backdrop-blur-md border border-white/40 px-6 py-4 rounded-2xl shadow-sm max-w-3xl mb-10"
           >
             <p className="text-lg sm:text-xl text-neutral-950 leading-relaxed font-bold">
-              Windmill unifies liquidity across all EVM chains, matching orders with unparalleled speed and dynamic optimal pricing, all from one integrated terminal.
+              {t.hero.description}
             </p>
           </motion.div>
 
@@ -82,33 +88,34 @@ export default function HeroSection() {
               href="/dashboard"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-8 py-4 text-base font-semibold text-white hover:bg-neutral-800 transition-colors shadow-lg w-full sm:w-auto"
             >
-              Access Terminal
+              {t.hero.ctaPrimary}
             </Link>
             <Link
               href="/docs"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-white/80 backdrop-blur-sm px-8 py-4 text-base font-semibold text-black hover:bg-white transition-colors shadow-lg w-full sm:w-auto border border-white/50"
             >
-              Read Technical Docs
+              {t.hero.ctaSecondary}
             </Link>
           </motion.div>
 
           {/* ── Footer Tags ──────────────────────────────────── */}
-          <motion.div variants={itemVariants} className="flex items-center gap-3 text-sm font-semibold text-neutral-950 mb-16 bg-white/40 backdrop-blur-sm px-6 py-2 rounded-full border border-white/20">
-            <span>Solver Network</span>
-            <span className="text-neutral-600">/</span>
-            <span>Zero Hidden Fees</span>
-            <span className="text-neutral-600">/</span>
-            <span>Dynamic Pricing</span>
-            <span className="text-neutral-600">/</span>
-            <span>Multi-Chain</span>
+          <motion.div variants={itemVariants} className="flex flex-wrap justify-center items-center gap-3 text-sm font-semibold text-neutral-950 mb-16 bg-white/40 backdrop-blur-sm px-6 py-2 rounded-full border border-white/20">
+            {t.hero.tags.map((tag, index) => (
+              <React.Fragment key={tag}>
+                <span>{tag}</span>
+                {index < t.hero.tags.length - 1 && (
+                  <span className="text-neutral-600">/</span>
+                )}
+              </React.Fragment>
+            ))}
           </motion.div>
         </motion.div>
 
         {/* ── Glassmorphic Stats Dashboard ────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={shouldReduceMotion ? { duration: 0.5 } : { duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="w-full"
         >
           <StatsPanel />

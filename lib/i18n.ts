@@ -12,6 +12,7 @@ export const t = {
 
   // ── Navigation ────────────────────────────────────────────────
   nav: {
+    mainNavigation: 'Main navigation',
     dex: 'DEX',
     swap: 'Swap',
     pools: 'Pools',
@@ -35,15 +36,17 @@ export const t = {
 
   // ── Hero Section ──────────────────────────────────────────────
   hero: {
-    heading: 'The Decentralized Matchmaking Protocol for EVM',
+    pill: 'Your multi-chain trading terminal.',
+    heading1: 'Dynamic cross-chain swaps.',
+    heading2: 'Powered by Keepers.',
     description:
-      'A high-efficiency dynamic orderbook matching engine running entirely on-chain. Configure price slopes; let solvers settle automatically.',
+      'Windmill unifies liquidity across all EVM chains, matching orders with unparalleled speed and dynamic optimal pricing, all from one integrated terminal.',
     ctaPrimary: 'Access Terminal',
     ctaSecondary: 'Read Technical Docs',
     tags: [
+      'Solver Network',
+      'Zero Hidden Fees',
       'Dynamic Pricing',
-      'On-Chain Settlement',
-      'Keeper Network',
       'Multi-Chain',
     ] as readonly string[],
   },

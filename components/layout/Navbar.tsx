@@ -34,8 +34,8 @@ const SCROLL_THRESHOLD = 60;
 
 // ─── Helper: format wallet address safely ───────────────────────
 
-function formatAddress(address: string | null | undefined): string {
-  if (!address || address.length < 8) return t.nav.connected;
+function formatAddress(address: string): string {
+  if (address.length < 8) return address;
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
@@ -75,15 +75,18 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', onClick);
   }, [networkOpen]);
 
-  // ── Close mobile menu on Escape ─────────────────────────────
+  // ── Close menus on Escape ───────────────────────────────────
   useEffect(() => {
-    if (!mobileOpen) return;
+    if (!mobileOpen && !networkOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileOpen(false);
+      if (e.key === 'Escape') {
+        setMobileOpen(false);
+        setNetworkOpen(false);
+      }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [mobileOpen]);
+  }, [mobileOpen, networkOpen]);
 
   const handleConnect = useCallback(() => {
     setWalletModalOpen(true);
@@ -105,7 +108,7 @@ export default function Navbar() {
 
   return (
     <nav
-      aria-label="Main navigation"
+      aria-label={t.nav.mainNavigation}
       className="fixed top-0 left-0 right-0 z-50 flex justify-center px-4 pt-4"
     >
       <div
@@ -148,6 +151,7 @@ export default function Navbar() {
               <div ref={networkRef} className="relative">
                 <button
                   type="button"
+                  aria-expanded={networkOpen}
                   onClick={() => setNetworkOpen((prev) => !prev)}
                   className="flex items-center gap-1.5 rounded-lg border border-neutral-200/60 bg-white/50 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-white/80 transition-colors"
                 >
@@ -195,7 +199,7 @@ export default function Navbar() {
                 className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-xs font-semibold text-white hover:bg-neutral-800 transition-colors"
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                {formatAddress(address)}
+                {t.nav.disconnect} · {address ? formatAddress(address) : t.nav.connected}
               </button>
             ) : (
               <button
@@ -246,16 +250,35 @@ export default function Navbar() {
 
             {isConnected ? (
               <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center px-3 py-2 text-xs font-semibold text-neutral-700 bg-white/40 rounded-lg">
-                  <span>{t.nav.network}</span>
-                  <span className="text-neutral-500">{network}</span>
+                <div className="flex flex-col gap-1 p-2 bg-white/40 rounded-lg">
+                  <div className="flex justify-between items-center px-1 py-1 text-xs font-semibold text-neutral-700">
+                    <span>{t.nav.network}</span>
+                    <span className="text-neutral-500">{network}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 mt-1">
+                    {NETWORKS.map((net) => (
+                      <button
+                        key={net}
+                        type="button"
+                        onClick={() => handleNetworkSwitch(net)}
+                        className={cn(
+                          'w-full text-center rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
+                          net === network
+                            ? 'bg-neutral-900 text-white font-semibold'
+                            : 'bg-white/50 text-neutral-600 hover:bg-white/80',
+                        )}
+                      >
+                        {net}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleDisconnect}
                   className="w-full text-center rounded-lg bg-neutral-900 px-4 py-2.5 text-xs font-semibold text-white hover:bg-neutral-800 transition-colors"
                 >
-                  {t.nav.disconnect} · {formatAddress(address)}
+                  {t.nav.disconnect} · {address ? formatAddress(address) : t.nav.connected}
                 </button>
               </div>
             ) : (
