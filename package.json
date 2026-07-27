@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "clsx": "^2.1.1",
+    "ethers": "^6.17.0",
     "framer-motion": "^12.42.2",
     "next": "16.1.6",
     "react": "19.2.3",
