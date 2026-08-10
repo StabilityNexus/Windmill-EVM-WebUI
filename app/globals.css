@@ -95,11 +95,11 @@ body {
 }
 
 .glow-spot-light-1 {
-  background: radial-gradient(circle, rgba(0, 0, 0, 0.02) 0%, transparent 60%);
+  background: radial-gradient(circle, rgba(255, 197, 23, 0.06) 0%, transparent 60%);
 }
 
 .glow-spot-light-2 {
-  background: radial-gradient(circle, rgba(0, 0, 0, 0.015) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(34, 139, 34, 0.04) 0%, transparent 70%);
 }
 
 /* ── Glassmorphism (Premium Glass) ────────────────────────────── */
@@ -285,8 +285,8 @@ body {
     transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .feature-card-white:hover {
-  border-color: #d4d4d4;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.04);
+  border-color: #ffc517;
+  box-shadow: 0 12px 40px rgba(255, 197, 23, 0.06);
   transform: translateY(-4px);
 }
 

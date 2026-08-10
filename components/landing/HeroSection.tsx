@@ -30,7 +30,7 @@ export default function HeroSection() {
         {/* Heading (Reduced size, animated B&W gradient text) */}
         <h1 className="text-reveal-2 font-sans text-3xl sm:text-5xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-black max-w-3xl leading-[1.15] mb-6">
           The Decentralized{' '}
-          <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-black via-neutral-700 to-neutral-500">
+          <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-[#ffc517] via-[#e5b015] to-[#228b22]">
             Matchmaking
           </span>{' '}
           Protocol for EVM.
@@ -89,10 +89,10 @@ export default function HeroSection() {
                     <div className="border-b border-black/5 w-full" />
                     <div className="border-b border-black/5 w-full" />
                   </div>
-                  <div className="w-full h-16 bg-black rounded-t-sm opacity-100" />
-                  <div className="w-full h-12 bg-black rounded-t-sm opacity-80" />
-                  <div className="w-full h-9 bg-black rounded-t-sm opacity-60" />
-                  <div className="w-full h-6 bg-black rounded-t-sm opacity-30" />
+                  <div className="w-full h-16 bg-[#ffc517] rounded-t-sm opacity-100" />
+                  <div className="w-full h-12 bg-[#ffc517] rounded-t-sm opacity-80" />
+                  <div className="w-full h-9 bg-[#ffc517] rounded-t-sm opacity-60" />
+                  <div className="w-full h-6 bg-[#ffc517] rounded-t-sm opacity-30" />
                 </div>
                 <div className="flex justify-between text-[9px] text-neutral-400 font-mono mt-1">
                   <span>Start: $1.20</span>
@@ -102,7 +102,7 @@ export default function HeroSection() {
 
               {/* Connecting Match Action */}
               <div className="flex flex-col items-center justify-center gap-1 shrink-0">
-                <div className="h-8 w-8 rounded-full bg-black text-white flex items-center justify-center shadow-lg font-mono font-bold text-xs">
+                <div className="h-8 w-8 rounded-full bg-[#ffc517] text-black flex items-center justify-center shadow-lg font-mono font-bold text-xs ring-4 ring-[#ffc517]/20">
                   ⚡
                 </div>
                 <span className="text-[9px] font-bold tracking-widest text-neutral-800 uppercase mt-1">MATCH</span>
@@ -119,10 +119,10 @@ export default function HeroSection() {
                     <div className="border-b border-black/5 w-full" />
                     <div className="border-b border-black/5 w-full" />
                   </div>
-                  <div className="w-full h-6 bg-neutral-300 rounded-t-sm opacity-40" />
-                  <div className="w-full h-9 bg-neutral-400 rounded-t-sm opacity-60" />
-                  <div className="w-full h-12 bg-neutral-500 rounded-t-sm opacity-80" />
-                  <div className="w-full h-16 bg-neutral-700 rounded-t-sm opacity-90" />
+                  <div className="w-full h-6 bg-[#228b22] rounded-t-sm opacity-40" />
+                  <div className="w-full h-9 bg-[#228b22] rounded-t-sm opacity-60" />
+                  <div className="w-full h-12 bg-[#228b22] rounded-t-sm opacity-80" />
+                  <div className="w-full h-16 bg-[#228b22] rounded-t-sm opacity-90" />
                 </div>
                 <div className="flex justify-between text-[9px] text-neutral-400 font-mono mt-1">
                   <span>Start: $0.85</span>

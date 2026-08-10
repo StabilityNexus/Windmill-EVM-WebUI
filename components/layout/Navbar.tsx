@@ -38,7 +38,7 @@ export default function Navbar() {
         <NavBody className="glass-pill border border-neutral-100 bg-white/75 shadow-lg min-w-[768px]">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group cursor-pointer mr-6 shrink-0">
-            <div className="flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black text-white font-bold text-sm">
+            <div className="flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black text-[#ffc517] font-extrabold text-sm ring-2 ring-[#ffc517]/20 transition-all duration-300 group-hover:scale-105 group-hover:ring-[#ffc517]/40 shadow-sm">
               W
             </div>
             <span className="font-sans text-sm font-bold tracking-tight text-black">
@@ -107,8 +107,8 @@ export default function Navbar() {
         <MobileNav className="glass-pill border border-neutral-100 bg-white/75 shadow-lg w-full max-w-[calc(100vw-2rem)]">
           <MobileNavHeader className="px-4 py-2">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black text-white font-bold text-sm">
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black text-[#ffc517] font-extrabold text-sm ring-2 ring-[#ffc517]/20">
                 W
               </div>
               <span className="font-sans text-sm font-bold tracking-tight text-black">
