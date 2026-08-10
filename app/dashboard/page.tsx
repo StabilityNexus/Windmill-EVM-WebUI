@@ -144,27 +144,27 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="w-full min-h-screen bg-white text-black pt-24">
+    <main className="w-full min-h-screen bg-background text-foreground pt-24 transition-colors duration-300">
       <WalletModal />
 
       <div className="max-w-6xl mx-auto px-6 py-12 flex flex-col gap-8">
         {/* Page Header */}
         <div>
-          <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">EVM Order Matcher</span>
-          <h1 className="text-3xl font-extrabold tracking-tight text-black mt-1">Exchange Dashboard</h1>
+          <span className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">EVM Order Matcher</span>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground mt-1">Exchange Dashboard</h1>
         </div>
 
         {!isConnected && (
           /* Glass Alert to connect wallet */
-          <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/50 p-6 text-center flex flex-col items-center gap-3">
+          <div className="rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 p-6 text-center flex flex-col items-center gap-3">
             <span className="text-2xl">🔌</span>
-            <h2 className="text-base font-bold text-black">Wallet Connection Required</h2>
-            <p className="text-xs text-neutral-500 max-w-sm">
+            <h2 className="text-base font-bold text-foreground">Wallet Connection Required</h2>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm">
               Please connect your wallet using the button on the top right to start deploying dynamic order curves.
             </p>
             <button
               onClick={() => setWalletModalOpen(true)}
-              className="mt-2 rounded-full bg-black px-6 py-2 text-xs font-bold text-white hover:bg-neutral-800 transition-colors shadow-sm"
+              className="mt-2 rounded-full bg-black dark:bg-white px-6 py-2 text-xs font-bold text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors shadow-sm cursor-pointer"
             >
               Connect Wallet
             </button>
@@ -173,22 +173,22 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Left Column: Create Order Form */}
-          <div className={`lg:col-span-1 border border-neutral-100 rounded-3xl p-6 bg-white shadow-sm transition-opacity duration-300 ${!isConnected ? 'opacity-50 pointer-events-none' : ''}`}>
-            <h2 className="text-lg font-bold text-black mb-4">Deploy Curve Order</h2>
-            <form onSubmit={handleCreateOrder} className="flex flex-col gap-4 text-xs font-semibold uppercase tracking-wider text-neutral-600">
+          <div className={`lg:col-span-1 border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 bg-card shadow-sm transition-opacity duration-300 ${!isConnected ? 'opacity-50 pointer-events-none' : ''}`}>
+            <h2 className="text-lg font-bold text-foreground mb-4">Deploy Curve Order</h2>
+            <form onSubmit={handleCreateOrder} className="flex flex-col gap-4 text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-400">
               {/* Buy/Sell Selector */}
-              <div className="flex gap-2 bg-neutral-50 p-1 rounded-full border border-neutral-100">
+              <div className="flex gap-2 bg-neutral-50 dark:bg-neutral-900 p-1 rounded-full border border-neutral-100 dark:border-neutral-800">
                 <button
                   type="button"
                   onClick={() => setOrderType('Buy')}
-                  className={`flex-1 py-2 text-center rounded-full text-[10px] font-bold transition-all ${orderType === 'Buy' ? 'bg-black text-white' : 'text-neutral-500'}`}
+                  className={`flex-1 py-2 text-center rounded-full text-[10px] font-bold transition-all cursor-pointer ${orderType === 'Buy' ? 'bg-black dark:bg-white text-white dark:text-black shadow-sm' : 'text-neutral-500'}`}
                 >
                   Buy Order
                 </button>
                 <button
                   type="button"
                   onClick={() => setOrderType('Sell')}
-                  className={`flex-1 py-2 text-center rounded-full text-[10px] font-bold transition-all ${orderType === 'Sell' ? 'bg-black text-white' : 'text-neutral-500'}`}
+                  className={`flex-1 py-2 text-center rounded-full text-[10px] font-bold transition-all cursor-pointer ${orderType === 'Sell' ? 'bg-black dark:bg-white text-white dark:text-black shadow-sm' : 'text-neutral-500'}`}
                 >
                   Sell Order
                 </button>
@@ -197,12 +197,12 @@ export default function DashboardPage() {
               {/* Tokens In/Out */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="token-in-select" className="text-[9px] text-neutral-400">Token In</label>
+                  <label htmlFor="token-in-select" className="text-[9px] text-neutral-400 dark:text-neutral-500">Token In</label>
                   <select
                     id="token-in-select"
                     value={tokenIn}
                     onChange={(e) => setTokenIn(e.target.value)}
-                    className="border border-neutral-200 bg-white p-2.5 rounded-xl text-black font-normal"
+                    className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-2.5 rounded-xl text-foreground font-normal"
                   >
                     <option value="WETH">WETH</option>
                     <option value="USDC">USDC</option>
@@ -211,12 +211,12 @@ export default function DashboardPage() {
                   </select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="token-out-select" className="text-[9px] text-neutral-400">Token Out</label>
+                  <label htmlFor="token-out-select" className="text-[9px] text-neutral-400 dark:text-neutral-500">Token Out</label>
                   <select
                     id="token-out-select"
                     value={tokenOut}
                     onChange={(e) => setTokenOut(e.target.value)}
-                    className="border border-neutral-200 bg-white p-2.5 rounded-xl text-black font-normal"
+                    className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-2.5 rounded-xl text-foreground font-normal"
                   >
                     <option value="USDC">USDC</option>
                     <option value="WETH">WETH</option>
@@ -228,7 +228,7 @@ export default function DashboardPage() {
 
               {/* Amount */}
               <div className="flex flex-col gap-1">
-                <label htmlFor="amount-input" className="text-[9px] text-neutral-400">Amount</label>
+                <label htmlFor="amount-input" className="text-[9px] text-neutral-400 dark:text-neutral-500">Amount</label>
                 <input
                   id="amount-input"
                   type="number"
@@ -236,14 +236,14 @@ export default function DashboardPage() {
                   required
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
-                  className="border border-neutral-200 bg-white p-2.5 rounded-xl text-black font-normal"
+                  className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-2.5 rounded-xl text-foreground font-normal"
                   placeholder="1.0"
                 />
               </div>
 
               {/* Starting Price */}
               <div className="flex flex-col gap-1">
-                <label htmlFor="start-price-input" className="text-[9px] text-neutral-400">Start Price ($)</label>
+                <label htmlFor="start-price-input" className="text-[9px] text-neutral-400 dark:text-neutral-500">Start Price ($)</label>
                 <input
                   id="start-price-input"
                   type="number"
@@ -251,14 +251,14 @@ export default function DashboardPage() {
                   required
                   value={startPrice}
                   onChange={(e) => setStartPrice(Number(e.target.value))}
-                  className="border border-neutral-200 bg-white p-2.5 rounded-xl text-black font-normal"
+                  className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-2.5 rounded-xl text-foreground font-normal"
                   placeholder="3000"
                 />
               </div>
 
               {/* Price Slope */}
               <div className="flex flex-col gap-1">
-                <label htmlFor="slope-input" className="text-[9px] text-neutral-400">Slope ($/sec)</label>
+                <label htmlFor="slope-input" className="text-[9px] text-neutral-400 dark:text-neutral-500">Slope ($/sec)</label>
                 <input
                   id="slope-input"
                   type="number"
@@ -266,10 +266,10 @@ export default function DashboardPage() {
                   required
                   value={slope}
                   onChange={(e) => setSlope(Number(e.target.value))}
-                  className="border border-neutral-200 bg-white p-2.5 rounded-xl text-black font-normal"
+                  className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-2.5 rounded-xl text-foreground font-normal"
                   placeholder="-0.2"
                 />
-                <span className="text-[9px] text-neutral-400 font-normal normal-case mt-0.5">
+                <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-normal normal-case mt-0.5">
                   Negative for Buys, positive for Sells. Price updates dynamically.
                 </span>
               </div>
@@ -277,7 +277,7 @@ export default function DashboardPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-2 w-full rounded-full bg-black py-3 text-center text-xs font-bold text-white uppercase hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                className="mt-2 w-full rounded-full bg-black dark:bg-white py-3 text-center text-xs font-bold text-white dark:text-black uppercase hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? 'Deploying...' : 'Deploy Order'}
               </button>
@@ -287,38 +287,38 @@ export default function DashboardPage() {
           {/* Right Column: Active Orders & History */}
           <div className="lg:col-span-2 flex flex-col gap-8 w-full">
             {/* Active Orders Section */}
-            <div className="border border-neutral-100 rounded-3xl p-6 bg-white shadow-sm w-full">
-              <h2 className="text-lg font-bold text-black mb-4">Your Dynamic Orders</h2>
+            <div className="border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 bg-card shadow-sm w-full">
+              <h2 className="text-lg font-bold text-foreground mb-4">Your Dynamic Orders</h2>
               <div className="flex flex-col gap-4">
                 {activeOrders.length === 0 ? (
-                  <p className="text-neutral-400 text-xs py-6 text-center">No active dynamic orders deployed.</p>
+                  <p className="text-neutral-400 dark:text-neutral-500 text-xs py-6 text-center">No active dynamic orders deployed.</p>
                 ) : (
                   activeOrders
                     .map((order) => (
                       <div
                         key={order.id}
-                        className="border border-neutral-100 bg-neutral-50/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                        className="border border-neutral-100 dark:border-neutral-800 bg-neutral-50/30 dark:bg-neutral-900/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                       >
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-mono text-neutral-400">#{order.id}</span>
-                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${order.type === 'Buy' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                            <span className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500">#{order.id}</span>
+                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${order.type === 'Buy' ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400'}`}>
                               {order.type}
                             </span>
-                            <span className="text-xs font-bold text-neutral-800">
+                            <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
                               {order.amount} {order.tokenIn} ➔ {order.tokenOut}
                             </span>
                           </div>
                           <div className="flex flex-col gap-0.5 text-xs text-neutral-500 mt-1">
                             <div>
-                              Start: <span className="font-semibold text-black">${order.startPrice}</span>
+                              Start: <span className="font-semibold text-foreground">${order.startPrice}</span>
                             </div>
                             <div>
-                              Slope: <span className="font-semibold text-black">{order.slope > 0 ? `+${order.slope}` : order.slope} /s</span>
+                              Slope: <span className="font-semibold text-foreground">{order.slope > 0 ? `+${order.slope}` : order.slope} /s</span>
                             </div>
-                            <div className="flex items-center gap-1.5 mt-1 font-semibold text-black">
+                            <div className="flex items-center gap-1.5 mt-1 font-semibold text-foreground">
                               Current Price:
-                              <span className="text-black font-mono font-bold animate-pulse text-sm">${order.currentPrice}</span>
+                              <span className="text-foreground font-mono font-bold animate-pulse text-sm">${order.currentPrice}</span>
                             </div>
                           </div>
                         </div>
@@ -327,7 +327,7 @@ export default function DashboardPage() {
                         <button
                           onClick={() => handleSimulateSweep(order.id)}
                           disabled={!isConnected}
-                          className="rounded-full border border-black/10 bg-white px-4 py-2 text-[10px] font-bold text-black hover:border-black transition-colors shrink-0 disabled:opacity-40"
+                          className="rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 px-4 py-2 text-[10px] font-bold text-black dark:text-white hover:border-black dark:hover:border-white transition-colors shrink-0 disabled:opacity-40 cursor-pointer"
                         >
                           Simulate Sweep Match ⚡
                         </button>
@@ -338,19 +338,19 @@ export default function DashboardPage() {
             </div>
 
             {/* Settled History */}
-            <div className="border border-neutral-100 rounded-3xl p-6 bg-white shadow-sm w-full">
-              <h2 className="text-lg font-bold text-black mb-4">Settled Matches Log</h2>
-              <div className="flex flex-col gap-3 font-mono text-[11px] text-neutral-500">
+            <div className="border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 bg-card shadow-sm w-full">
+              <h2 className="text-lg font-bold text-foreground mb-4">Settled Matches Log</h2>
+              <div className="flex flex-col gap-3 font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
                 {settledHistory.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center border-b border-neutral-100 pb-2.5 last:border-none last:pb-0">
+                  <div key={item.id} className="flex justify-between items-center border-b border-neutral-100 dark:border-neutral-800 pb-2.5 last:border-none last:pb-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-sans text-[9px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-800 uppercase font-semibold">Matched</span>
-                      <span className="text-black font-bold font-sans">{item.pair}</span>
+                      <span className="font-sans text-[9px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 uppercase font-semibold">Matched</span>
+                      <span className="text-foreground font-bold font-sans">{item.pair}</span>
                       <span>Qty: {item.amount}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-black font-bold">{item.price}</span>
-                      <span className="text-neutral-400 text-[10px]">{item.age}</span>
+                      <span className="text-foreground font-bold">{item.price}</span>
+                      <span className="text-neutral-400 dark:text-neutral-500 text-[10px]">{item.age}</span>
                     </div>
                   </div>
                 ))}
