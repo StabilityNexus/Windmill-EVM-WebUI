@@ -3,18 +3,15 @@
 
 <!-- Organization Logo -->
 <div align="center" style="display: flex; align-items: center; justify-content: center; gap: 16px;">
+  <img alt="Windmill" src="public/windmill-logo.svg" width="120">
   <img alt="Stability Nexus" src="public/stability.svg" width="175">
-  <img src="public/todo-project-logo.svg" width="175" />
 </div>
 
 &nbsp;
 
-<!-- Organization Name -->
 <div align="center">
 
-[![Static Badge](https://img.shields.io/badge/Stability_Nexus-/TODO-228B22?style=for-the-badge&labelColor=FFC517)](https://TODO.stability.nexus/)
-
-<!-- Correct deployed url to be added -->
+[![Static Badge](https://img.shields.io/badge/Stability_Nexus-Windmill_Exchange-228B22?style=for-the-badge&labelColor=FFC517)](https://github.com/StabilityNexus/Windmill-EVM-WebUI)
 
 </div>
 
@@ -32,157 +29,134 @@
 <a href="https://discord.gg/YzDKeEfWtS">
 <img src="https://img.shields.io/discord/995968619034984528?style=flat&logo=discord&logoColor=white&logoSize=auto&label=Discord&labelColor=5865F2&color=57F287" alt="Discord Badge"/></a>
 &nbsp;&nbsp;
-<!-- Medium -->
-<a href="https://news.stability.nexus/">
-  <img src="https://img.shields.io/badge/Medium-black?style=flat&logo=medium&logoColor=black&logoSize=auto&color=white" alt="Medium Badge"></a>
-&nbsp;&nbsp;
-<!-- LinkedIn -->
-<a href="https://linkedin.com/company/stability-nexus">
-  <img src="https://img.shields.io/badge/LinkedIn-black?style=flat&logo=LinkedIn&logoColor=white&logoSize=auto&color=0A66C2" alt="LinkedIn Badge"></a>
-&nbsp;&nbsp;
-<!-- Youtube -->
-<a href="https://www.youtube.com/@StabilityNexus">
-  <img src="https://img.shields.io/youtube/channel/subscribers/UCZOG4YhFQdlGaLugr_e5BKw?style=flat&logo=youtube&logoColor=white&logoSize=auto&labelColor=FF0000&color=FF0000" alt="Youtube Badge"></a>
+<!-- OpenSSF Scorecard -->
+<a href="https://securityscorecards.dev/viewer/?uri=github.com/StabilityNexus/Windmill-EVM-WebUI">
+<img src="https://api.securityscorecards.dev/projects/github.com/StabilityNexus/Windmill-EVM-WebUI/badge" alt="OpenSSF Scorecard"/></a>
 </p>
 
 ---
 
 <div align="center">
-<h1>TODO: Project Name</h1>
+<h1>Windmill Exchange</h1>
 </div>
 
-[TODO](https://TODO.stability.nexus/) is a ... TODO: Project Description.
+**Windmill Exchange** is a decentralized on-chain order matching engine with configurable dynamic pricing curves and autonomous keeper matching. It brings an auction-house model to EVM chains, where buy and sell orders are continuously matched by keeper bots rather than by a central limit order book.
 
 ---
 
-## Project Maturity
+## 🚀 Features
 
-TODO: In the checklist below, mark the items that have been completed and delete items that are not applicable to the current project:
-
-* [ ] The project has a logo.
-* [ ] The project has a favicon.
-* [ ] The protocol:
-   - [ ] has been described and formally specified in a paper.
-   - [ ] has had its main properties mathematically proven.
-   - [ ] has been formally verified.
-* [ ] The smart contracts:
-   - [ ] were thoroughly reviewed by at least two knights of The Stable Order.
-   - [ ] were deployed to:
-      - [ ] Ergo
-      - [ ] Cardano
-      - [ ] EVM Chains:
-        - [ ] Ethereum Classic
-        - [ ] Ethereum
-        - [ ] Polygon
-        - [ ] BSC
-        - [ ] Base
-* [ ] The mobile app:
-   - [ ] has an _About_ page containing the Stability Nexus's logo and pointing to the social media accounts of the Stability Nexus.
-   - [ ] is available for download as a release in this repo.
-   - [ ] is available in the relevant app stores.
-* [ ] The web frontend:
-   - [ ] has proper title and metadata.
-   - [ ] has proper open graph metadata, to ensure that it is shown well when shared in social media (Discord, Telegram, Twitter, LinkedIn).
-   - [ ] has a footer, containing the Stability Nexus's logo and pointing to the social media accounts of the Stability Nexus.
-   - [ ] is fully static and client-side.
-   - [ ] is deployed to Github Pages via a Github Workflow.
-   - [ ] is accessible through the https://TODO:PROJECT-NAME.stability.nexus domain.
-* [ ] the project is listed in [https://stability.nexus/protocols](https://stability.nexus/protocols).
+- **Auction-based matching**: buy and sell orders are matched continuously by keepers, not through a traditional order book.
+- **Dynamic pricing curves**: configurable price curves (`PriceCurve.sol`) adapt to market conditions for each trading pair.
+- **Autonomous keeps**: an off-chain keeper bot monitors protocol state and executes settlement transactions safely (`DRY_RUN` and confirmation controls included).
+- **Multi-network support**: Ethereum, Polygon, Base, BNB Smart Chain and more.
+- **Wallet-first UI**: connects to MetaMask and other Web3 wallets, with in-app network switching.
+- **Live statistics**: real-time stats and market views powered by an indexed subgraph.
+- **Transparent infrastructure**: every match, fill and repricing event is settled on-chain and verifiable in the explorer.
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-TODO:
-
-### Frontend
-
-TODO:
-
-- Next.js 14+ (React)
-- TypeScript
-- TailwindCSS
-- shadcn/ui
-
-### Blockchain
-
-TODO:
-
-- Wagmi
-- Solidity Smart Contracts
-- Ethers.js
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js (App Router), React, TypeScript |
+| Styling | Tailwind CSS |
+| UI Components | Custom glassmorphism components + shadcn-style primitives |
+| Blockchain | Wagmi, Ethers.js, Web3 wallets (MetaMask, WalletConnect, etc.) |
+| Smart Contracts | [Windmill-EVM-Contracts](https://github.com/StabilityNexus/Windmill-EVM-Contracts) (Solidity + Foundry) |
+| Keepers | [Windmill-EVM-Keeper](https://github.com/StabilityNexus/Windmill-EVM-Keeper) (Node.js + Ethers.js) |
+| Indexing | The Graph subgraph (`subgraph/`) |
 
 ---
 
-## Getting Started
+## ▶️ Getting Started
 
 ### Prerequisites
 
-TODO
-
-- Node.js 18+
-- npm/yarn/pnpm
-- MetaMask or any other web3 wallet browser extension
+- **Node.js 20+** and npm
+- A Web3 wallet (e.g. MetaMask) to connect
 
 ### Installation
 
-TODO
-
-#### 1. Clone the Repository
-
 ```bash
-git clone https://github.com/StabilityNexus/TODO.git
-cd TODO
-```
+# 1. Clone the repository
+git clone https://github.com/StabilityNexus/Windmill-EVM-WebUI.git
+cd Windmill-EVM-WebUI
 
-#### 2. Install Dependencies
-
-Using your preferred package manager:
-
-```bash
+# 2. Install dependencies
 npm install
-# or
-yarn install
-# or
-pnpm install
 ```
 
-#### 3. Run the Development Server
-
-Start the app locally:
+### Run the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
 ```
 
-#### 4. Open your Browser
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-Navigate to [http://localhost:3000](http://localhost:3000) to see the application.
+### Build, lint and type-check
+
+```bash
+npm run build      # production build
+npm run lint       # ESLint
+npx tsc --noEmit   # TypeScript type-check
+```
+
+### Test
+
+```bash
+# This repo is a frontend; end-to-end checks run through build + lint.
+# Contract logic tests live in Windmill-EVM-Contracts (forge test).
+```
 
 ---
 
-## Contributing
+## 📁 Project Structure
 
-We welcome contributions of all kinds! To contribute:
+```text
+.
+├── app/                    # Next.js App Router pages + metadata
+│   ├── dashboard/          # Connected-user dashboard
+│   ├── how-it-works/       # Protocol explainer
+│   ├── stats/              # Live protocol statistics
+│   ├── keepers/            # Keeper network overview
+│   ├── support/            # Help & support
+│   ├── docs/               # Documentation
+│   ├── layout.tsx          # Root layout (metadata, theme, fonts)
+│   └── globals.css         # Global design system
+├── components/
+│   ├── layout/             # Navbar, Footer
+│   └── landing/            # Landing sections
+├── context/                # Wallet provider (Wagmi)
+├── hooks/                  # Shared React hooks
+├── lib/                    # Utilities and helpers
+├── types/                  # Shared TypeScript types
+├── subgraph/               # The Graph indexing definitions
+├── public/                 # Static assets and logos
+├── brand/                  # Project branding assets (logo, palette, typography)
+└── next.config.ts          # Next.js configuration
+```
 
-1. Fork the repository and create your feature branch (`git checkout -b feature/AmazingFeature`).
-2. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
-3. Run the development workflow commands to ensure code quality:
-   - `npm run format:write`
-   - `npm run lint:fix`
-   - `npm run typecheck`
-4. Push your branch (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request for review.
+---
 
-If you encounter bugs, need help, or have feature requests:
+## 🤝 Contributing
 
-- Please open an issue in this repository providing detailed information.
-- Describe the problem clearly and include any relevant logs or screenshots.
+We welcome contributions of all kinds! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) first — it explains the mandatory Discord workflow and our AI-use disclosure policy.
 
-We appreciate your feedback and contributions!
+---
 
-© 2025 The Stable Order.
+## 🌐 Deployment
+
+The repo ships with a GitHub Actions workflow (`.github/workflows/nextjs.yml`) that builds and deploys the static export to **GitHub Pages** on every push to `main`.
+
+---
+
+## 🙌 Thanks to All Contributors
+
+Thanks for spending your time helping Windmill Exchange grow. Keep rocking!
+
+[![Contributors](https://contrib.rocks/image?repo=StabilityNexus/Windmill-EVM-WebUI)](https://github.com/StabilityNexus/Windmill-EVM-WebUI/graphs/contributors)
+
+© Stability Nexus

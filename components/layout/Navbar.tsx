@@ -32,15 +32,13 @@ export default function Navbar() {
   ];
 
   return (
-    <div className="fixed top-6 left-0 right-0 z-50 flex justify-center w-full pointer-events-none">
+<div className="fixed top-6 left-0 right-0 z-50 flex justify-center w-full pointer-events-none">
       <BaseNavbar className="w-full max-w-4xl pointer-events-auto">
         {/* Desktop Navigation using resizable NavBody */}
         <NavBody className="glass-pill border border-neutral-100 bg-white/75 shadow-lg min-w-[768px]">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group cursor-pointer mr-6 shrink-0">
-            <div className="flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black text-white font-bold text-sm">
-              W
-            </div>
+            <img src="/windmill-logo.svg" alt="Windmill" width={32} height={32} className="shrink-0" />
             <span className="font-sans text-sm font-bold tracking-tight text-black">
               WINDMILL
             </span>
@@ -108,9 +106,7 @@ export default function Navbar() {
           <MobileNavHeader className="px-4 py-2">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black text-white font-bold text-sm">
-                W
-              </div>
+              <img src="/windmill-logo.svg" alt="Windmill" width={28} height={28} className="shrink-0" />
               <span className="font-sans text-sm font-bold tracking-tight text-black">
                 WINDMILL
               </span>
