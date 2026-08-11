@@ -8,9 +8,7 @@ export default function Footer() {
           {/* Brand Info */}
           <div className="flex flex-col gap-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black font-bold text-base">
-                W
-              </div>
+              <img src="/windmill-logo.svg" alt="Windmill" width={32} height={32} className="shrink-0" />
               <span className="font-sans text-lg font-bold tracking-tight text-white">
                 WINDMILL
               </span>
@@ -62,7 +60,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://github.com/StabilityNexus/Windmill-EVM-Contracts/tree/main/Windmill-EVM-Keeper2"
+                  href="https://github.com/StabilityNexus/Windmill-EVM-Keeper"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm hover:text-white transition-colors"
@@ -91,9 +89,12 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-neutral-900 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-neutral-500" suppressHydrationWarning>
-            &copy; {new Date().getFullYear()} Stability Nexus. All rights reserved.
-          </p>
+          <div className="flex items-center gap-3">
+            <img src="/stability.svg" alt="Stability Nexus" width={24} height={24} className="shrink-0" />
+            <p className="text-xs text-neutral-500" suppressHydrationWarning>
+              &copy; {new Date().getFullYear()} Stability Nexus. All rights reserved.
+            </p>
+          </div>
           <div className="flex gap-6">
             <a href="#" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors">Privacy Policy</a>
             <a href="#" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors">Terms of Service</a>
