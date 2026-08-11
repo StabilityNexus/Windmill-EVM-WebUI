@@ -371,6 +371,253 @@ body {
   }
 }
 
+/* ─── Service Cards (from template) ──────────────────────────── */
+.title-container {
+  margin-bottom: 80px;
+  position: relative;
+  display: inline-block;
+  margin-left: 100px;
+}
+
+.main-title {
+  font-size: 6rem;
+  font-family: 'Epilogue', sans-serif;
+  font-weight: 800;
+  letter-spacing: -4px;
+}
+
+.italic-text {
+  font-family: 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 400;
+  margin-left: -5px;
+}
+
+.title-underline-svg {
+  position: absolute;
+}
+
+.cards-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1400px;
+  height: 650px;
+  margin: 100px auto 100px 100px;
+  display: flex;
+  justify-content: center;
+}
+
+.card {
+  width: 320px;
+  height: 460px;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  gap: 1.5rem;
+  padding: 3.5rem 1.5rem 1.5rem;
+  cursor: pointer;
+  border-radius: 10px;
+  color: white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  transform-origin: center center;
+}
+
+.card-title {
+  text-align: left;
+  font-size: 2.2rem;
+  font-family: 'Epilogue', sans-serif;
+  font-weight: 800;
+  margin-top: 30px;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.card-divider-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.card-green {
+  background-color: #29725f;
+  left: calc(50% - 700px);
+  top: 50px;
+  transform: rotate(4deg);
+  z-index: 1;
+}
+
+.card-darkblue {
+  background-color: #82a0ff;
+  color: #1a1a1a;
+  left: calc(50% - 430px);
+  top: 100px;
+  transform: rotate(-5deg);
+  z-index: 2;
+}
+
+.card-orange {
+  background-color: #f5693c;
+  color: #1a1a1a;
+  left: calc(50% - 220px);
+  top: 20px;
+  transform: rotate(5deg);
+  z-index: 3;
+}
+
+.card-maroon {
+  background-color: #a0325a;
+  left: calc(50% + 50px);
+  top: 30px;
+  transform: rotate(-8deg);
+  z-index: 4;
+}
+
+.card-pink {
+  background-color: #f0befa;
+  color: #1a1a1a;
+  left: calc(50% + 320px);
+  top: 70px;
+  transform: rotate(5deg);
+  z-index: 5;
+}
+
+.card-darkblue::after,
+.card-orange::after,
+.card-maroon::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -35px;
+  right: -35px;
+}
+
+.card-pink .card-divider-svg,
+.card-orange .card-divider-svg,
+.card-darkblue .card-divider-svg {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.card-list {
+  list-style: none;
+  font-weight: 500;
+}
+
+.card-list li {
+  margin-bottom: 8px;
+  font-size: 1.15rem;
+  font-weight: 500;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  line-height: 1.3;
+  letter-spacing: -0.3px;
+}
+
+.services-card__bullet-svg {
+  width: 14px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: currentColor;
+}
+
+.card-sticker {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.card-sticker svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.card-sticker.sticker-camera {
+  width: 100px;
+  height: auto;
+  top: -30px;
+  left: 80px;
+  transform: rotate(3deg);
+}
+
+.card-sticker.sticker-phone {
+  width: 80px;
+  height: auto;
+  top: -30px;
+  left: 100px;
+  transform: rotate(1deg);
+}
+
+.card-sticker.sticker-smiley {
+  width: 80px;
+  height: auto;
+  top: -35px;
+  left: 70%;
+  transform: translateX(-50%) rotate(4deg);
+}
+
+.card-sticker.sticker-hand {
+  width: 80px;
+  height: auto;
+  top: -25px;
+  left: 70%;
+  transform: translateX(-50%) rotate(8deg);
+}
+
+.card-sticker.sticker-heart {
+  width: 90px;
+  height: auto;
+  top: -35px;
+  right: 15px;
+  transform: rotate(1deg);
+}
+
+@media (max-width: 768px) {
+  .title-container {
+    margin-left: 24px;
+  }
+  .main-title {
+    font-size: 3rem;
+  }
+  .cards-wrapper {
+    margin: 60px auto 60px 24px;
+    height: auto;
+    min-height: 500px;
+  }
+  .card {
+    width: 260px;
+    height: 380px;
+    padding: 2.5rem 1rem 1rem;
+  }
+  .card-title {
+    font-size: 1.6rem;
+  }
+  .card-list li {
+    font-size: 0.95rem;
+  }
+  .card-green {
+    left: calc(50% - 300px);
+  }
+  .card-darkblue {
+    left: calc(50% - 180px);
+  }
+  .card-orange {
+    left: calc(50% - 80px);
+  }
+  .card-maroon {
+    left: calc(50% + 30px);
+  }
+  .card-pink {
+    left: calc(50% + 140px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal-3d,
   .reveal-3d-flip,
@@ -380,7 +627,6 @@ body {
     transform: none;
     transition: none;
   }
-
   .text-reveal-1,
   .text-reveal-2,
   .text-reveal-3,
