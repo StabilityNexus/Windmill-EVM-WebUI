@@ -1,0 +1,79 @@
+[
+  {
+    "type": "event",
+    "name": "OrderCreated",
+    "inputs": [
+      { "name": "orderId", "type": "uint256", "indexed": true },
+      { "name": "maker", "type": "address", "indexed": true },
+      { "name": "tokenIn", "type": "address", "indexed": true },
+      { "name": "tokenOut", "type": "address", "indexed": false },
+      { "name": "amountIn", "type": "uint256", "indexed": false },
+      { "name": "isBuy", "type": "bool", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "OrderCancelled",
+    "inputs": [
+      { "name": "orderId", "type": "uint256", "indexed": true },
+      { "name": "maker", "type": "address", "indexed": true },
+      { "name": "refund", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "OrderMatched",
+    "inputs": [
+      { "name": "buyOrderId", "type": "uint256", "indexed": true },
+      { "name": "sellOrderId", "type": "uint256", "indexed": true },
+      { "name": "keeper", "type": "address", "indexed": true },
+      { "name": "settlementPrice", "type": "uint256", "indexed": false },
+      { "name": "executedQuantity", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "OrderFilled",
+    "inputs": [
+      { "name": "orderId", "type": "uint256", "indexed": true }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "OrderPartiallyFilled",
+    "inputs": [
+      { "name": "orderId", "type": "uint256", "indexed": true },
+      { "name": "remainingIn", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "ProtocolFeeUpdated",
+    "inputs": [
+      { "name": "treasury", "type": "address", "indexed": true },
+      { "name": "protocolFeeBps", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferred",
+    "inputs": [
+      { "name": "previousOwner", "type": "address", "indexed": true },
+      { "name": "newOwner", "type": "address", "indexed": true }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "Paused",
+    "inputs": [
+      { "name": "by", "type": "address", "indexed": true }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "Unpaused",
+    "inputs": [
+      { "name": "by", "type": "address", "indexed": true }
+    ]
+  }
+]

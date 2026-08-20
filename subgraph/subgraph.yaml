@@ -1,0 +1,45 @@
+specVersion: 1.2.0
+description: WindmillExchange event indexing
+repository: https://github.com/StabilityNexus/Windmill-EVM-WebUI
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: WindmillExchange
+    network: mainnet
+    source:
+      abi: WindmillExchange
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Order
+        - Settlement
+        - Pair
+        - User
+        - Protocol
+      abis:
+        - name: WindmillExchange
+          file: ./abis/WindmillExchange.json
+      eventHandlers:
+        - event: OrderCreated(indexed uint256,indexed address,indexed address,address,uint256,bool)
+          handler: handleOrderCreated
+        - event: OrderCancelled(indexed uint256,indexed address,uint256)
+          handler: handleOrderCancelled
+        - event: OrderMatched(indexed uint256,indexed uint256,indexed address,uint256,uint256)
+          handler: handleOrderMatched
+        - event: OrderFilled(indexed uint256)
+          handler: handleOrderFilled
+        - event: OrderPartiallyFilled(indexed uint256,uint256)
+          handler: handleOrderPartiallyFilled
+        - event: ProtocolFeeUpdated(indexed address,uint256)
+          handler: handleProtocolFeeUpdated
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: Paused(indexed address)
+          handler: handlePaused
+        - event: Unpaused(indexed address)
+          handler: handleUnpaused
+      file: ./src/mapping.ts
