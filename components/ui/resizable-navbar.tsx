@@ -95,7 +95,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
     <div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        'hidden min-w-0 shrink flex-row items-center justify-center space-x-0.5 xl:space-x-1 text-[11px] xl:text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition duration-200 xl:flex',
+  'hidden min-w-0 shrink flex-row items-center justify-center space-x-0.5 xl:space-x-1 text-sm font-semibold text-neutral-700 dark:text-neutral-300 transition duration-200 xl:flex',
         className
       )}
     >
@@ -116,7 +116,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
           {hovered === idx && (
             <div className="absolute inset-0 h-full w-full rounded-full bg-neutral-100/70 dark:bg-white/10 z-0 animate-fade-in pointer-events-none" />
           )}
-          <span className="relative z-10 uppercase tracking-wider text-[10px] font-bold whitespace-nowrap">{item.name}</span>
+          <span className="relative z-10 uppercase tracking-wider text-sm font-bold whitespace-nowrap">{item.name}</span>
         </Link>
       ))}
     </div>

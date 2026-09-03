@@ -48,7 +48,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group cursor-pointer mr-4 shrink-0">
             <img src="/windmill-logo.svg" alt="Windmill" width={32} height={32} className="shrink-0" />
-            <span className="font-sans text-sm font-bold tracking-tight text-black dark:text-white">
+            <span className="font-sans text-lg font-bold tracking-tight text-black dark:text-white">
               WINDMILL
             </span>
           </Link>
@@ -68,7 +68,7 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={() => setNetworkDropdownOpen(!networkDropdownOpen)}
-                    className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-[10px] font-bold hover:bg-neutral-100 transition-colors uppercase tracking-wider text-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm font-bold hover:bg-neutral-100 transition-colors uppercase tracking-wider text-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 cursor-pointer"
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                     {network} ▾
@@ -83,7 +83,7 @@ export default function Navbar() {
                             switchNetwork(net);
                             setNetworkDropdownOpen(false);
                           }}
-                          className="w-full text-left rounded-xl px-3 py-1.5 text-[10px] font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-800 text-black dark:text-white transition-colors cursor-pointer"
+                          className="w-full text-left rounded-xl px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-800 text-black dark:text-white transition-colors cursor-pointer"
                         >
                           {net}
                         </button>
@@ -96,7 +96,7 @@ export default function Navbar() {
                 <NavbarButton
                   onClick={disconnectWallet}
                   variant="dark"
-                  className="rounded-full !px-4 !py-1.5 text-[10px] font-bold text-white bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-colors border-none"
+                  className="rounded-full !px-4 !py-1.5 text-sm font-bold text-white bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-colors border-none"
                 >
                   {address}
                 </NavbarButton>
@@ -105,7 +105,7 @@ export default function Navbar() {
               <NavbarButton
                 onClick={() => setWalletModalOpen(true)}
                 variant="dark"
-                className="rounded-full !px-4 !py-1.5 text-[10px] font-bold text-white bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-all duration-300 border-none shadow-sm"
+                className="rounded-full !px-4 !py-1.5 text-sm font-bold text-white bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-all duration-300 border-none shadow-sm"
               >
                 Connect Wallet
               </NavbarButton>
@@ -119,7 +119,7 @@ export default function Navbar() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
               <img src="/windmill-logo.svg" alt="Windmill" width={28} height={28} className="shrink-0" />
-              <span className="font-sans text-sm font-bold tracking-tight text-black dark:text-white">
+              <span className="font-sans text-lg font-bold tracking-tight text-black dark:text-white">
                 WINDMILL
               </span>
             </Link>
@@ -144,7 +144,7 @@ export default function Navbar() {
                   href={item.link}
                   onClick={() => setIsMobileMenuOpen(false)}
                   aria-current={item.active ? 'page' : undefined}
-                  className={`py-1 text-sm font-semibold transition-colors duration-200 ${
+                  className={`py-1 text-lg font-semibold transition-colors duration-200 ${
                     item.active
                       ? 'text-black dark:text-white font-bold'
                       : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
@@ -167,7 +167,7 @@ export default function Navbar() {
               {/* Wallet Button */}
               {isConnected ? (
                 <div className="flex flex-col gap-3">
-                  <div className="flex justify-between items-center text-xs font-bold text-black dark:text-white border border-neutral-100 dark:border-neutral-800 rounded-xl px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/60">
+                  <div className="flex justify-between items-center text-base font-bold text-black dark:text-white border border-neutral-100 dark:border-neutral-800 rounded-xl px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/60">
                     <span>Network</span>
                     <span className="text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{network}</span>
                   </div>
@@ -177,7 +177,7 @@ export default function Navbar() {
                       setIsMobileMenuOpen(false);
                     }}
                     variant="dark"
-                    className="w-full text-center py-2.5 rounded-xl text-xs"
+                    className="w-full text-center py-2.5 rounded-xl text-base"
                   >
                     Disconnect {address}
                   </NavbarButton>
@@ -189,7 +189,7 @@ export default function Navbar() {
                     setIsMobileMenuOpen(false);
                   }}
                   variant="dark"
-                  className="w-full text-center py-2.5 rounded-xl text-xs"
+                  className="w-full text-center py-2.5 rounded-xl text-base"
                 >
                   Connect Wallet
                 </NavbarButton>
