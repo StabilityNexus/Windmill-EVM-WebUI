@@ -9,7 +9,7 @@ export default function CTASection() {
     <section
       id="cta"
       ref={containerRef}
-      className="bg-white dark:bg-[#0a0a0a] section-padding border-t border-black/5 dark:border-white/10 relative overflow-hidden transition-colors duration-300"
+      className="bg-white dark:bg-[#0a0a0a] pt-8 pb-20 md:pb-24 border-t border-black/5 dark:border-white/10 relative overflow-hidden transition-colors duration-300"
     >
       {/* Background Decorators */}
       <div className="absolute inset-0 hero-grid-pattern opacity-[0.2] dark:opacity-[0.15] pointer-events-none" />
