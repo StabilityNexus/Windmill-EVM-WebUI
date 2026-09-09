@@ -21,6 +21,22 @@ The Windmill Exchange brand uses the following palette. These values match the S
 | `neutral-500` | `#737373` | Secondary text |
 | `neutral-900` | `#171717` | Footer background, dark surfaces |
 
+## Surface Tokens (Renovation)
+
+The landing renovation adds a warm "paper canvas" surface layer on top of the base
+theme. These are CSS variables in `app/globals.css` and Tailwind utilities.
+
+| Token / utility | Role |
+|---|---|
+| `--canvas` / `bg-canvas` | Warm off-white page ground for the hero and marketing sections (dark: near-black with a faint warm cast) |
+| `--canvas-raised` / `bg-canvas-raised` | Floating cards and panels that sit above the canvas |
+| `--canvas-sunken` / `bg-canvas-sunken` | Recessed wells and inset areas |
+| `--shadow-float-sm/md/lg` / `shadow-float-*` | Soft, warm-tinted elevation for the 3D collage cards |
+| `bg-canvas-grain` | Subtle dotted paper texture for the hero |
+
+The warm tint is a low-chroma derivative of **Accent Yellow**, so the canvas reads
+as brand-adjacent rather than a flat grey.
+
 ## Usage Rules
 
 - **Match Green** is reserved for the brand: primary CTAs, the logo hub, success feedback.
