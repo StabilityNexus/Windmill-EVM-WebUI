@@ -1,201 +1,348 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import StatsPanel from '@/components/landing/StatsPanel';
-import InteractiveDotGrid from '@/components/ui/InteractiveDotGrid';
-import { Zap } from 'lucide-react';
+import { Zap, ArrowUpRight, Menu, X } from 'lucide-react';
+import { useWallet } from '@/context/WalletContext';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import FloatingCard from '@/components/ui/FloatingCard';
+import HeroCollage from '@/components/landing/hero/HeroCollage';
+import HeroDecor from '@/components/landing/hero/HeroDecor';
 
-/* ── Framer Motion Variants ─────────────────────────────────────── */
+/* ── Motion ────────────────────────────────────────────────────── */
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
-const fadeSlideUp = (delay: number) => ({
-  hidden: { opacity: 0, y: 28 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.9, ease, delay },
-  },
-});
+/* ── In-card navigation ────────────────────────────────────────── */
 
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.15, delayChildren: 0.1 },
-  },
-};
+const NAV_LEFT = [
+  { label: 'Home', href: '/' },
+  { label: 'Dashboard', href: '/dashboard' },
+  { label: 'How It Works', href: '/how-it-works' },
+];
+const NAV_RIGHT = [
+  { label: 'Stats', href: '/stats' },
+  { label: 'Keepers', href: '/keepers' },
+  { label: 'Support', href: '/support' },
+  { label: 'Docs', href: '/docs' },
+];
+const NAV_ALL = [...NAV_LEFT, ...NAV_RIGHT];
 
-/* ── Sub-components ─────────────────────────────────────────────── */
+const navLinkClass =
+  'text-[11px] font-semibold text-neutral-500 transition-colors hover:text-foreground dark:text-neutral-400';
 
-function BuyCurvePanel() {
+function HeroNavigation() {
+  const { setWalletModalOpen } = useWallet();
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
-    <div className="flex-1 w-full flex flex-col gap-3 p-4 bg-neutral-50/50 dark:bg-neutral-900/60 rounded-xl border border-black/5 dark:border-white/10 shadow-xs">
-      <div className="flex justify-between items-center">
-        <span className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200">BUY ORDER CURVE</span>
-        <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-semibold">
-          s &lt; 0
-        </span>
-      </div>
-      <div className="h-20 flex items-end justify-between gap-1 pt-6 border-b border-dashed border-black/5 dark:border-white/10 relative">
-        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-5">
-          <div className="border-b border-black/5 dark:border-white/10 w-full" />
-          <div className="border-b border-black/5 dark:border-white/10 w-full" />
+    <div className="relative z-40 px-5 pt-11 sm:px-8 sm:pt-6">
+      <div className="flex items-center justify-between">
+        {/* LEFT — brand + primary links */}
+        <div className="flex items-center gap-9">
+          <Link href="/" className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/windmill-logo.svg" alt="Windmill" width={26} height={26} />
+            <span className="text-sm font-black tracking-tight text-foreground">WINDMILL</span>
+          </Link>
+          <nav className="hidden items-center gap-4 md:flex">
+            {NAV_LEFT.map((l) => (
+              <Link key={l.href} href={l.href} className={navLinkClass}>
+                {l.label}
+              </Link>
+            ))}
+          </nav>
         </div>
-        <div className="w-full h-16 bg-black dark:bg-white rounded-t-xs opacity-100" />
-        <div className="w-full h-12 bg-black dark:bg-white rounded-t-xs opacity-80" />
-        <div className="w-full h-9 bg-black dark:bg-white rounded-t-xs opacity-60" />
-        <div className="w-full h-6 bg-black dark:bg-white rounded-t-xs opacity-30" />
+
+        {/* RIGHT — secondary links + utilities */}
+        <div className="flex items-center gap-3">
+          <nav className="hidden items-center gap-4 md:flex">
+            {NAV_RIGHT.map((l) => (
+              <Link key={l.href} href={l.href} className={navLinkClass}>
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => setWalletModalOpen(true)}
+            className="hidden rounded-full bg-neutral-950 px-4 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200 sm:inline-flex"
+          >
+            Connect Wallet
+          </button>
+          <button
+            type="button"
+            aria-label="Toggle menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-black/10 text-foreground md:hidden dark:border-white/15"
+          >
+            {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
-      <div className="flex justify-between text-[9px] text-neutral-400 dark:text-neutral-500 font-mono mt-1">
-        <span>P(t) = P₀ + s·t</span>
-        <span>Decreasing Bid</span>
-      </div>
+
+      {/* Mobile dropdown */}
+      {menuOpen && (
+        <div className="absolute inset-x-3 top-full z-40 mt-2 rounded-2xl border border-black/10 bg-canvas-raised p-3 shadow-float-md md:hidden dark:border-white/10">
+          <nav className="flex flex-col">
+            {NAV_ALL.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setMenuOpen(false)}
+                className="rounded-lg px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+          <button
+            type="button"
+            onClick={() => {
+              setWalletModalOpen(true);
+              setMenuOpen(false);
+            }}
+            className="mt-2 w-full rounded-full bg-neutral-950 px-4 py-2.5 text-sm font-bold text-white dark:bg-white dark:text-neutral-950"
+          >
+            Connect Wallet
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-function SellCurvePanel() {
+/* ── Top-center notch (visual signature detail) ────────────────── */
+
+function HeroNotch() {
   return (
-    <div className="flex-1 w-full flex flex-col gap-3 p-4 bg-neutral-50/50 dark:bg-neutral-900/60 rounded-xl border border-black/5 dark:border-white/10 shadow-xs">
-      <div className="flex justify-between items-center">
-        <span className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200">SELL ORDER CURVE</span>
-        <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 font-semibold">
-          s &gt; 0
-        </span>
-      </div>
-      <div className="h-20 flex items-end justify-between gap-1 pt-6 border-b border-dashed border-black/5 dark:border-white/10 relative">
-        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-5">
-          <div className="border-b border-black/5 dark:border-white/10 w-full" />
-          <div className="border-b border-black/5 dark:border-white/10 w-full" />
+    <>
+      {/* Clip path for the shallow downward notch — rounded convex
+          shoulders where it leaves the top edge, near-straight sides,
+          rounded bottom corners. Same shape at every width. */}
+      <svg width="0" height="0" className="absolute" aria-hidden>
+        <defs>
+          <clipPath id="hero-notch-clip" clipPathUnits="objectBoundingBox">
+            <path d="M0,0 L1,0 L1,0.05 C0.93,0.08 0.90,0.45 0.855,0.78 C0.842,0.93 0.815,1 0.77,1 L0.23,1 C0.185,1 0.158,0.93 0.145,0.78 C0.10,0.45 0.07,0.08 0,0.05 Z" />
+          </clipPath>
+        </defs>
+      </svg>
+
+      {/* Inward notch — a page-yellow shape that cuts the card's top edge
+          DOWNWARD around the toggle. Wide enough for the pill to sit
+          inside the flat lower section. */}
+      <div
+        aria-hidden
+        className="absolute left-1/2 top-0 z-30 h-10 w-[300px] -translate-x-1/2 bg-canvas sm:h-14 sm:w-[440px]"
+        style={{ clipPath: 'url(#hero-notch-clip)' }}
+      />
+
+      {/* Trade / Keeper selector sitting in the downward notch */}
+      <div className="absolute left-1/2 top-0 z-50 -translate-x-1/2 -translate-y-[32%]">
+        <div className="flex items-center gap-1 rounded-full border border-white bg-canvas p-1 shadow-[0_6px_18px_rgba(20,16,6,0.12)] dark:border-white/15 sm:p-2">
+          <button
+            type="button"
+            className="rounded-full bg-neutral-950 px-4 py-1.5 text-xs font-bold text-white sm:px-6 sm:py-2.5 sm:text-sm"
+          >
+            Trade
+          </button>
+          <button
+            type="button"
+            className="rounded-full px-4 py-1.5 text-xs font-bold text-neutral-800 dark:text-neutral-200 sm:px-6 sm:py-2.5 sm:text-sm"
+          >
+            Keeper
+          </button>
         </div>
-        <div className="w-full h-6 bg-neutral-300 dark:bg-neutral-700 rounded-t-xs opacity-40" />
-        <div className="w-full h-9 bg-neutral-400 dark:bg-neutral-600 rounded-t-xs opacity-60" />
-        <div className="w-full h-12 bg-neutral-500 dark:bg-neutral-500 rounded-t-xs opacity-80" />
-        <div className="w-full h-16 bg-neutral-700 dark:bg-neutral-300 rounded-t-xs opacity-90" />
       </div>
-      <div className="flex justify-between text-[9px] text-neutral-400 dark:text-neutral-500 font-mono mt-1">
-        <span>P(t) = P₀ + s·t</span>
-        <span>Increasing Ask</span>
+    </>
+  );
+}
+
+/* ── Product phone ─────────────────────────────────────────────── */
+
+function MatchRow({
+  pair,
+  price,
+  delta,
+  up,
+}: {
+  pair: string;
+  price: string;
+  delta: string;
+  up: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-xl bg-black/[0.03] px-2.5 py-2 dark:bg-white/[0.04]">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-neutral-200 to-neutral-400 text-[8px] font-bold text-neutral-700 dark:from-neutral-700 dark:to-neutral-900 dark:text-neutral-200">
+        {pair.slice(0, 1)}
+      </span>
+      <div className="min-w-0 flex-1 leading-tight">
+        <p className="truncate text-[10px] font-bold text-foreground">{pair}</p>
+        <p className="font-mono text-[8px] text-neutral-400">{price}</p>
       </div>
+      <svg viewBox="0 0 40 16" className={`h-4 w-10 ${up ? 'text-emerald-500' : 'text-blue-500'}`}>
+        <path
+          d={up ? 'M2 14 C 12 12, 20 4, 38 2' : 'M2 2 C 12 4, 20 12, 38 14'}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+      </svg>
+      <span className={`shrink-0 text-[9px] font-bold ${up ? 'text-emerald-500' : 'text-blue-500'}`}>
+        {delta}
+      </span>
     </div>
   );
 }
 
-function MockInterfacePanel() {
+function ProductPhone() {
   return (
-    <motion.div
-      variants={fadeSlideUp(0.55)}
-      className="relative w-full max-w-3xl rounded-2xl border border-black/5 dark:border-white/10 bg-neutral-50/50 dark:bg-neutral-900/40 p-2 shadow-xl backdrop-blur-md pointer-events-auto transform rotate-x-6 rotate-y-[-3deg] transition-all duration-700 hover:rotate-x-0 hover:rotate-y-0 hover:scale-[1.01]"
+    <FloatingCard
+      depth={8}
+      rotateX={2}
+      rotateY={-3}
+      rotate={0}
+      float="none"
+      elevation="none"
+      ariaHidden={false}
+      className="w-[288px] sm:w-[336px] lg:w-[372px]"
     >
-      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-950 overflow-hidden shadow-inner aspect-[16/9] flex flex-col">
-        {/* Mock header */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-black/5 dark:border-white/10 bg-neutral-50 dark:bg-neutral-900">
-          <div className="flex gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-black/10 dark:bg-white/20" />
-            <span className="w-2.5 h-2.5 rounded-full bg-black/10 dark:bg-white/20" />
-            <span className="w-2.5 h-2.5 rounded-full bg-black/10 dark:bg-white/20" />
-          </div>
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 tracking-wider">solver-match-node</span>
-          <div className="w-4" />
-        </div>
+      <div className="relative">
+        <span className="absolute -left-[3px] top-[20%] h-8 w-[3px] rounded-l bg-neutral-700" />
+        <span className="absolute -left-[3px] top-[32%] h-12 w-[3px] rounded-l bg-neutral-700" />
+        <span className="absolute -right-[3px] top-[26%] h-16 w-[3px] rounded-r bg-neutral-700" />
 
-        {/* Live Pricing Curves Diagram */}
-        <div className="flex-1 p-6 flex flex-col sm:flex-row gap-6 items-center justify-center bg-white dark:bg-neutral-950">
-          <BuyCurvePanel />
+        <div className="rounded-[2.6rem] bg-gradient-to-b from-neutral-500 via-neutral-900 to-neutral-700 p-[3px] shadow-float-lg">
+          <div className="rounded-[2.45rem] bg-neutral-950 p-2">
+            <div className="relative aspect-[9/17] overflow-hidden rounded-[2rem] bg-canvas-raised">
+              <div className="absolute left-1/2 top-3 z-30 h-6 w-20 -translate-x-1/2 rounded-full bg-neutral-950" />
+              <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-br from-white/10 via-transparent to-transparent" />
 
-          {/* Connecting Match Action */}
-          <div className="flex flex-col items-center justify-center gap-1 shrink-0">
-            <div className="h-8 w-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center shadow-lg font-mono font-bold text-xs">
-              <Zap className="w-3.5 h-3.5 fill-current" />
+              <div className="relative z-10 flex h-full flex-col">
+                <div className="flex items-center justify-between px-5 pt-3.5 text-[9px] font-bold text-foreground">
+                  <span>9:41</span>
+                  <span className="tracking-[0.15em] text-neutral-400">••••• 5G</span>
+                </div>
+
+                <div className="flex items-center justify-between px-4 pt-4 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-green-light to-brand-green text-[11px] font-black text-white">
+                      W
+                    </span>
+                    <div className="leading-tight">
+                      <p className="text-[11px] font-bold text-foreground">Windmill</p>
+                      <p className="font-mono text-[8px] text-neutral-400">solver-node · Base</p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-emerald-500/12 px-2 py-0.5 text-[8px] font-bold text-emerald-500">
+                    LIVE
+                  </span>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5 px-3">
+                  <p className="px-1 text-[8px] font-bold uppercase tracking-wider text-neutral-400">
+                    Order feed
+                  </p>
+                  <MatchRow pair="ETH / USDC" price="P₀ 1,840.00" delta="+2.1%" up />
+                  <MatchRow pair="wBTC / USDC" price="P₀ 61,204" delta="-0.6%" up={false} />
+                  <div className="my-0.5 flex items-center gap-2 rounded-xl bg-brand/15 px-2.5 py-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background">
+                      <Zap className="h-3 w-3 fill-current" />
+                    </span>
+                    <div className="flex-1 leading-tight">
+                      <p className="text-[10px] font-bold text-foreground">Sweep executed</p>
+                      <p className="text-[8px] text-neutral-500 dark:text-neutral-400">
+                        2 orders matched at 1,847.20
+                      </p>
+                    </div>
+                  </div>
+                  <MatchRow pair="ARB / USDC" price="P₀ 0.9820" delta="+4.8%" up />
+                </div>
+
+                <div className="px-3 pb-2 pt-1">
+                  <div className="flex items-center justify-center gap-1.5 rounded-full bg-foreground py-2 text-[10px] font-bold text-background">
+                    Place order <ArrowUpRight className="h-3 w-3" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-around border-t border-black/5 px-4 py-2.5 dark:border-white/10">
+                  {['●', '◐', '◇', '☰'].map((g, i) => (
+                    <span
+                      key={i}
+                      className={`text-[11px] ${i === 0 ? 'text-foreground' : 'text-neutral-300 dark:text-neutral-600'}`}
+                    >
+                      {g}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
-            <span className="text-[9px] font-bold tracking-widest text-neutral-800 dark:text-neutral-200 uppercase mt-1">SWEEP</span>
           </div>
-
-          <SellCurvePanel />
         </div>
       </div>
-    </motion.div>
+    </FloatingCard>
   );
 }
 
-/* ── Main Component ─────────────────────────────────────────────── */
+/* ── Hero ──────────────────────────────────────────────────────── */
 
 export default function HeroSection() {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background text-foreground pt-32 pb-16 transition-colors duration-300"
+      className="relative flex items-start justify-center overflow-x-clip bg-canvas px-3 pt-12 pb-8 text-foreground transition-colors duration-300 sm:px-6 sm:pt-16 lg:min-h-screen lg:pb-12"
     >
-      {/* Interactive Dot Grid Background with spherical cursor deflection */}
-      <InteractiveDotGrid dotSpacing={32} baseDotRadius={1.25} />
+      {/* Positioning frame — cards + decor are siblings of the panel so
+          they can overflow it. The panel is NOT clipped, so the top
+          notch stays fully visible and the phone extends past the
+          bottom edge onto the yellow field. */}
+      <div className="relative w-full max-w-[84rem]">
+        {/* The large cream panel */}
+        <div className="relative rounded-[2.5rem] bg-canvas-raised pb-4 shadow-float-lg ring-1 ring-black/[0.05] dark:ring-white/[0.06] sm:pb-5 lg:pb-6">
+          <HeroNotch />
+          <HeroNavigation />
 
-      {/* Ambient soft glow spots */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 w-[60vw] h-[60vw] glow-spot-light-1 rounded-full opacity-[0.4] blur-3xl pointer-events-none animate-pulse-slow" />
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 w-[50vw] h-[50vw] glow-spot-light-2 rounded-full opacity-[0.3] blur-3xl pointer-events-none animate-pulse-slow" />
-
-      {/* Floating 3D Geometric Accents */}
-      <div className="absolute left-[8%] top-[25%] hidden lg:block animate-float pointer-events-none">
-        <div className="w-14 h-14 border border-black/10 dark:border-white/15 rounded-xl transform rotate-12 rotate-x-45 rotate-y-12 transition-transform duration-500 hover:border-black/30 dark:hover:border-white/30" />
-      </div>
-      <div className="absolute right-[10%] bottom-[20%] hidden lg:block animate-float-delayed pointer-events-none">
-        <div className="w-16 h-16 border border-black/10 dark:border-white/15 rounded-full border-dashed transform -rotate-12 transition-transform duration-500 hover:scale-110" />
-      </div>
-
-      <motion.div
-        className="relative mx-auto max-w-4xl px-6 md:px-8 text-center flex flex-col items-center justify-center"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {/* Heading */}
-        <motion.h1
-          variants={fadeSlideUp(0.1)}
-          className="font-sans text-3xl sm:text-5xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground max-w-3xl leading-[1.15] mb-6"
-        >
-          The Decentralized{' '}
-          <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-black via-neutral-700 to-neutral-500 dark:from-white dark:via-neutral-200 dark:to-neutral-400">
-            Matchmaking
-          </span>{' '}
-          Protocol for EVM.
-        </motion.h1>
-
-        {/* Description */}
-        <motion.p
-          variants={fadeSlideUp(0.25)}
-          className="font-sans text-sm sm:text-base text-neutral-500 dark:text-neutral-400 max-w-xl leading-relaxed mb-10"
-        >
-          A high-efficiency dynamic orderbook matching engine running entirely on-chain. Configure price slopes; let solvers settle automatically.
-        </motion.p>
-
-        {/* CTAs */}
-        <motion.div
-          variants={fadeSlideUp(0.4)}
-          className="flex flex-col sm:flex-row gap-4 items-center justify-center mb-10 w-full sm:w-auto"
-        >
-          <Link
-            href="/dashboard"
-            className="btn-premium-dark w-full sm:w-auto hover:scale-105 active:scale-[0.98] transition-all cursor-pointer shadow-xs"
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease, delay: 0.1 }}
+            className="relative z-20 mx-auto mt-8 max-w-3xl px-6 text-center sm:mt-12"
           >
-            Launch Exchange
-          </Link>
-          <Link
-            href="/docs"
-            className="btn-premium-light w-full sm:w-auto cursor-pointer"
-          >
-            Docs / API Reference
-          </Link>
-        </motion.div>
+            <h1 className="font-sans text-3xl font-black uppercase leading-[0.98] tracking-[-0.02em] text-foreground sm:text-4xl lg:text-5xl">
+              The Decentralized
+              <br />
+              Matchmaking{' '}
+              <span className="relative inline-block">
+                <span className="relative z-10">Protocol</span>
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 bottom-1 z-0 h-[0.26em] -skew-x-6 bg-brand/60"
+                />
+              </span>
+              <br />
+              for EVM.
+            </h1>
+            <p className="mx-auto mt-5 max-w-md text-xs font-medium leading-relaxed text-neutral-500 dark:text-neutral-400 sm:text-sm">
+              A dynamic on-chain orderbook. Set price slopes; autonomous keepers settle the matches.
+            </p>
+          </motion.div>
 
-        {/* Stats Panel */}
-        <motion.div variants={fadeSlideUp(0.55)} className="w-full mb-16">
-          <StatsPanel />
-        </motion.div>
+          {/* Phone — its upper portion shows, emerging from the panel;
+              the base is clipped by this wrapper, whose bottom sits at
+              the panel's bottom edge. */}
+          <div className="relative z-30 mx-auto mt-10 h-[256px] max-w-[460px] overflow-hidden rounded-b-[2.5rem] sm:mt-12 sm:h-[310px] lg:mt-14 lg:h-[348px]">
+            <div className="absolute left-1/2 top-5 -translate-x-1/2">
+              <ProductPhone />
+            </div>
+          </div>
+        </div>
 
-        {/* 3D Visual Mock Interface Panel */}
-        <MockInterfacePanel />
-      </motion.div>
+        {/* Floating cards + decor — overflow the panel freely (lg only) */}
+        <HeroCollage />
+        <HeroDecor />
+      </div>
     </section>
   );
 }

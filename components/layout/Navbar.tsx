@@ -22,6 +22,10 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [networkDropdownOpen, setNetworkDropdownOpen] = useState(false);
 
+  // The homepage hero carries its own navigation integrated into the
+  // central card composition, so the global navbar is suppressed there.
+  if (pathname === '/') return null;
+
   const networks = ['Localhost', 'Sepolia', 'Ethereum', 'Base', 'Polygon', 'BSC', 'ETC'];
 
   const navItems = [
