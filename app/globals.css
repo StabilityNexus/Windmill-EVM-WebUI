@@ -14,6 +14,9 @@
   --color-brand-dark: #e5b015;
   --color-brand-green: #228b22;
   --color-brand-green-light: #22c55e;
+  --color-canvas: var(--canvas);
+  --color-canvas-raised: var(--canvas-raised);
+  --color-canvas-sunken: var(--canvas-sunken);
   --font-sans: var(--font-sans);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -353,6 +356,15 @@ body {
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
+
+  /* Renovation — pastel-yellow field + warm cream panel */
+  --canvas: oklch(0.928 0.082 96);
+  --canvas-raised: oklch(0.984 0.017 96);
+  --canvas-sunken: oklch(0.9 0.09 95);
+  --shadow-float-sm: 0 4px 12px -2px rgb(31 26 12 / 0.1), 0 2px 6px -2px rgb(31 26 12 / 0.06);
+  --shadow-float-md: 0 18px 40px -12px rgb(31 26 12 / 0.18), 0 8px 16px -8px rgb(31 26 12 / 0.1);
+  --shadow-float-lg: 0 40px 80px -20px rgb(31 26 12 / 0.28), 0 16px 32px -12px rgb(31 26 12 / 0.14);
+
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -418,6 +430,14 @@ body {
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
   --grid-line: rgba(255, 255, 255, 0.08);
+
+  /* Renovation — dark canvas keeps a faint warm cast */
+  --canvas: oklch(0.155 0.006 90);
+  --canvas-raised: oklch(0.205 0.005 90);
+  --canvas-sunken: oklch(0.125 0.006 90);
+  --shadow-float-sm: 0 4px 12px -2px rgb(0 0 0 / 0.45), 0 2px 6px -2px rgb(0 0 0 / 0.35);
+  --shadow-float-md: 0 18px 40px -12px rgb(0 0 0 / 0.55), 0 8px 16px -8px rgb(0 0 0 / 0.4);
+  --shadow-float-lg: 0 40px 80px -20px rgb(0 0 0 / 0.65), 0 16px 32px -12px rgb(0 0 0 / 0.45);
 }
 
 @layer base {
@@ -430,6 +450,160 @@ body {
   html {
     @apply font-sans;
   }
+}
+
+@keyframes curve-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.02);
+  }
+}
+
+.animate-curve-pulse {
+  animation: curve-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENOVATION — Warm Canvas + 3D Collage System
+   Consumed by the landing hero + section restyles.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Surfaces ─────────────────────────────────────────────────── */
+/* bg-canvas / bg-canvas-raised / bg-canvas-sunken are generated from the
+   --color-canvas* entries in @theme inline (opacity modifiers supported). */
+
+.shadow-float-sm {
+  box-shadow: var(--shadow-float-sm);
+}
+.shadow-float-md {
+  box-shadow: var(--shadow-float-md);
+}
+.shadow-float-lg {
+  box-shadow: var(--shadow-float-lg);
+}
+
+/* Warm paper grain for the hero canvas (sits under the dot grid) */
+.bg-canvas-grain {
+  background-image: radial-gradient(circle, rgba(31, 26, 12, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+.dark .bg-canvas-grain {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+/* ── 3D scene primitives ─────────────────────────────────────── */
+
+.scene-3d {
+  perspective: 1600px;
+  perspective-origin: 50% 40%;
+}
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* Collage tilt presets — angles mirror the reference layout */
+.tilt-card {
+  transform: perspective(1400px) rotateX(6deg) rotateY(-9deg);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tilt-card-left {
+  transform: perspective(1400px) rotateX(4deg) rotateY(12deg) rotate(-5deg);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tilt-card-right {
+  transform: perspective(1400px) rotateX(4deg) rotateY(-12deg) rotate(5deg);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tilt-card-flat:hover {
+  transform: perspective(1400px) rotateX(0deg) rotateY(0deg) rotate(0deg);
+}
+
+/* ── Chunky 3D card — bevel + stacked warm shadow ────────────── */
+
+.card-3d {
+  background-color: #ffffff;
+  border: 1px solid rgba(20, 16, 6, 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 2px 0 #e6ddc6,
+    0 6px 0 #ded4ba,
+    0 30px 50px -16px rgba(20, 16, 6, 0.3),
+    0 10px 20px -8px rgba(20, 16, 6, 0.18);
+}
+.dark .card-3d {
+  background-color: #17171a;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 0 #0d0d0d,
+    0 6px 0 #0a0a0a,
+    0 30px 50px -16px rgba(0, 0, 0, 0.7),
+    0 10px 20px -8px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Scattered plus marks for the hero backdrop ──────────────── */
+
+.bg-plus-marks {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cg fill='none' stroke='%23140f06' stroke-opacity='0.16' stroke-width='1.5'%3E%3Cpath d='M24 16v12M18 22h12'/%3E%3Cpath d='M108 92v10M103 97h10'/%3E%3Cpath d='M70 118v8M66 122h8'/%3E%3Cpath d='M124 40v8M120 44h8'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 140px 140px;
+}
+.dark .bg-plus-marks {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.14' stroke-width='1.5'%3E%3Cpath d='M24 16v12M18 22h12'/%3E%3Cpath d='M108 92v10M103 97h10'/%3E%3Cpath d='M70 118v8M66 122h8'/%3E%3Cpath d='M124 40v8M120 44h8'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ── Extended float / orbit motion ───────────────────────────── */
+
+@keyframes float-soft {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0) rotate(1.5deg);
+  }
+}
+@keyframes float-soft-lg {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -22px, 0) rotate(-2deg);
+  }
+}
+@keyframes drift-x {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(12px, -8px, 0);
+  }
+}
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-float-soft {
+  animation: float-soft 8s ease-in-out infinite;
+}
+.animate-float-soft-delayed {
+  animation: float-soft 8s ease-in-out 2.5s infinite;
+}
+.animate-float-soft-lg {
+  animation: float-soft-lg 11s ease-in-out infinite;
+}
+.animate-drift-x {
+  animation: drift-x 9s ease-in-out infinite;
+}
+.animate-spin-slow {
+  animation: spin-slow 26s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -448,7 +622,13 @@ body {
   .text-reveal-4,
   .animate-float,
   .animate-float-delayed,
-  .animate-pulse-slow {
+  .animate-pulse-slow,
+  .animate-curve-pulse,
+  .animate-float-soft,
+  .animate-float-soft-delayed,
+  .animate-float-soft-lg,
+  .animate-drift-x,
+  .animate-spin-slow {
     animation: none;
   }
 }
