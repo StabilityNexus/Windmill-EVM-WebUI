@@ -23,13 +23,13 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-white tracking-wider uppercase">Protocol</h4>
             <ul className="flex flex-col gap-2">
               <li>
-                <a href="#features" className="text-sm hover:text-white transition-colors">Features</a>
+                <Link href="/#features" className="text-sm hover:text-white transition-colors">Features</Link>
               </li>
               <li>
-                <a href="#how-it-works" className="text-sm hover:text-white transition-colors">How It Works</a>
+                <Link href="/how-it-works" className="text-sm hover:text-white transition-colors">How It Works</Link>
               </li>
               <li>
-                <a href="#stats" className="text-sm hover:text-white transition-colors">Statistics</a>
+                <Link href="/stats" className="text-sm hover:text-white transition-colors">Statistics</Link>
               </li>
             </ul>
           </div>
