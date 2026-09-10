@@ -106,8 +106,8 @@ const cardVariants = {
 export default function FeatureCards() {
   return (
     <section
-      id="features"
-      className="relative scroll-mt-24 bg-white dark:bg-[#0a0a0a] text-foreground section-padding overflow-hidden transition-colors duration-300"
+      id="feature-cards"
+      className="relative bg-white dark:bg-[#0a0a0a] text-foreground section-padding overflow-hidden transition-colors duration-300"
     >
       {/* Subtle ambient background accents */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80vw] h-[40vw] rounded-full opacity-[0.03] blur-3xl pointer-events-none bg-gradient-to-br from-neutral-400 to-neutral-600" />
