@@ -28,16 +28,16 @@ interface StatCard {
 }
 
 export default function StatsPage() {
-  const { readContract, isReady } = useContract();
+  const { readContract, isReadReady } = useContract();
   const containerRef = useScrollRevealChildren<HTMLDivElement>({ threshold: 0.1 });
 
   const [totalOrders, setTotalOrders] = useState<number | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [protocolFee, setProtocolFee] = useState<number | null>(null);
 
-  // Fetch on-chain stats
+  // Fetch on-chain stats (works with connected wallet or public RPC fallback)
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReadReady) return;
     const fetchStats = async () => {
       const [totalResult, pausedResult, feeResult] = await Promise.all([
         readContract('totalOrders'),
@@ -49,7 +49,7 @@ export default function StatsPage() {
       if (feeResult.data !== null) setProtocolFee(Number(feeResult.data));
     };
     fetchStats();
-  }, [isReady, readContract]);
+  }, [isReadReady, readContract]);
 
   const stats: StatCard[] = useMemo(
     () => [
@@ -59,7 +59,7 @@ export default function StatsPage() {
         icon: BarChart2,
         bgClass: 'bg-[#EFF6FF]',
         textClass: 'text-[#2563EB]',
-        change: isReady ? 'Live from contract' : 'Connect wallet to view',
+        change: totalOrders !== null ? 'Live from contract' : 'Connecting to RPC...',
       },
       {
         label: 'Supported Chains',
@@ -82,7 +82,7 @@ export default function StatsPage() {
         icon: Building2,
         bgClass: 'bg-[#FAF5FF]',
         textClass: 'text-[#9333EA]',
-        change: isReady ? 'Configurable by owner' : 'Connect to view',
+        change: protocolFee !== null ? 'Configurable by owner' : 'Connecting to RPC...',
       },
       {
         label: 'Exchange Status',
@@ -116,7 +116,7 @@ export default function StatsPage() {
         change: 'Hard-coded cap (500 bps)',
       },
     ],
-    [totalOrders, isPaused, protocolFee, isReady]
+    [totalOrders, isPaused, protocolFee]
   );
 
   const supportedChains = Object.values(SUPPORTED_CHAINS);
