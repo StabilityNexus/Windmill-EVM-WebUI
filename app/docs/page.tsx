@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import WalletModal from '@/components/wallet/WalletModal';
 import { SUPPORTED_CHAINS } from '@/lib/contractConfig';
-import { useScrollRevealChildren } from '@/hooks/useScrollReveal';
 
 const DOCS_SECTIONS = [
   { id: 'overview', label: 'Overview' },
@@ -16,7 +15,35 @@ const DOCS_SECTIONS = [
 
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState('overview');
-  const containerRef = useScrollRevealChildren<HTMLDivElement>({ threshold: 0.05 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Re-observe [data-reveal] children every time the active section changes.
+  // Without this, elements rendered after the initial mount never get the
+  // IntersectionObserver attached and stay stuck at opacity-0.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Small timeout lets React finish rendering the new section's DOM nodes
+    const timer = setTimeout(() => {
+      const children = container.querySelectorAll<HTMLElement>('[data-reveal]');
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('revealed');
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.05, rootMargin: '0px 0px -40px 0px' },
+      );
+      children.forEach((child) => observer.observe(child));
+      return () => observer.disconnect();
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [activeSection]);
 
   return (
     <main className="w-full min-h-screen bg-background text-foreground pt-24 transition-colors duration-300">
@@ -69,27 +96,6 @@ export default function DocsPage() {
                     Node.js service using ethers.js that continuously scans for matchable order pairs and executes
                     settlement transactions to earn 0.1% fees.
                   </p>
-                </div>
-              </div>
-
-              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 bg-neutral-50/30 dark:bg-neutral-900/50">
-                <h3 className="text-sm font-bold text-black dark:text-white mb-2">Architecture</h3>
-                <div className="font-mono text-[11px] text-neutral-600 whitespace-pre overflow-x-auto">
-{`src/
-├── core/
-│   └── WindmillExchange.sol    # Main contract (order lifecycle + matching)
-├── interfaces/
-│   ├── IERC20.sol              # Minimal ERC-20 interface
-│   └── IWindmillExchange.sol   # Exchange interface
-├── libraries/
-│   ├── MathUtils.sol           # mulDiv, abs (RAY arithmetic)
-│   ├── PriceCurve.sol          # currentPrice, isMatchable, settlementPrice
-│   └── TokenTransfer.sol       # Safe ERC-20 transfers
-├── storage/
-│   ├── OrderStorage.sol        # Order state management
-│   └── PairStorage.sol         # Token pair → order ID mappings
-└── types/
-    └── OrderTypes.sol           # Order struct definition`}
                 </div>
               </div>
             </div>

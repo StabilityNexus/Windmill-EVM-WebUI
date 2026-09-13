@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useWallet } from '@/context/WalletContext';
 import {
@@ -21,8 +22,33 @@ export default function Navbar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [networkDropdownOpen, setNetworkDropdownOpen] = useState(false);
+  const networkDropdownRef = useRef<HTMLDivElement>(null);
 
   const networks = ['Localhost', 'Sepolia', 'Ethereum', 'Base', 'Polygon', 'BSC', 'ETC'];
+
+  useEffect(() => {
+    if (!networkDropdownOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!networkDropdownRef.current?.contains(event.target as Node)) {
+        setNetworkDropdownOpen(false);
+      }
+    };
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setNetworkDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscapeKey);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [networkDropdownOpen]);
 
   const navItems = [
     { name: 'Home', link: '/' },
@@ -47,7 +73,7 @@ export default function Navbar() {
         <NavBody>
           {/* Logo */}
           <Link href="/" className="relative z-20 flex items-center gap-2 group cursor-pointer shrink-0 justify-self-start">
-            <img src="/windmill-logo.svg" alt="Windmill" width={36} height={36} className="shrink-0" />
+            <Image src="/windmill-logo.svg" alt="Windmill" width={36} height={36} priority className="shrink-0" />
             <span className="font-sans text-base font-bold tracking-tight text-black dark:text-white">
               WINDMILL
             </span>
@@ -64,7 +90,7 @@ export default function Navbar() {
             {isConnected ? (
               <div className="flex items-center gap-2">
                 {/* Network select indicator */}
-                <div className="relative">
+                <div className="relative" ref={networkDropdownRef}>
                   <button
                     type="button"
                     onClick={() => setNetworkDropdownOpen(!networkDropdownOpen)}
@@ -117,8 +143,8 @@ export default function Navbar() {
         <MobileNav className="w-full max-w-[calc(100vw-2rem)]">
           <MobileNavHeader className="px-4 py-2">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <img src="/windmill-logo.svg" alt="Windmill" width={32} height={32} className="shrink-0" />
+            <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2">
+              <Image src="/windmill-logo.svg" alt="Windmill" width={32} height={32} className="shrink-0" />
               <span className="font-sans text-base font-bold tracking-tight text-black dark:text-white">
                 WINDMILL
               </span>

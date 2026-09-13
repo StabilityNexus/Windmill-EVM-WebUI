@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { Mail, Loader2, AlertCircle, Clock } from 'lucide-react';
@@ -11,12 +11,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // ── State types ───────────────────────────────────────────────────────────────
 type FormStatus = 'idle' | 'loading' | 'success' | 'error' | 'rate-limited';
 
-interface SupportFormProps {
-  theme?: 'light' | 'dark';
-}
-
-export default function SupportForm(props?: SupportFormProps) {
-  void props;
+export default function SupportForm() {
 
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');

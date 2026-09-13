@@ -183,26 +183,26 @@ export default function InteractiveCurveSimulator() {
   };
 
   return (
-    <div className="w-full rounded-3xl border border-black/10 bg-white p-6 sm:p-8 md:p-10 shadow-xl transition-all select-none">
+    <div className="w-full rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 p-6 sm:p-8 md:p-10 shadow-xl transition-colors select-none">
       {/* ── Top Header Bar ────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-black/5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-black/5 dark:border-white/10">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[11px] font-mono font-bold tracking-widest uppercase text-emerald-600">
+            <span className="text-[11px] font-mono font-bold tracking-widest uppercase text-emerald-600 dark:text-emerald-400">
               Live Mathematical Engine
             </span>
           </div>
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight">
+          <h3 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
             Dynamic Pricing Curve Simulator
           </h3>
-          <p className="text-xs sm:text-sm text-neutral-500 mt-1">
+          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1">
             Experience the on-chain formula{' '}
-            <code className="px-1.5 py-0.5 rounded bg-neutral-100 font-mono text-[11px] text-neutral-800">
+            <code className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 font-mono text-[11px] text-neutral-800 dark:text-neutral-200">
               P(t) = P₀ + s · t
             </code>{' '}
-            defined in <span className="font-semibold text-neutral-700">PriceCurve.sol</span>. Matches when{' '}
-            <code className="px-1.5 py-0.5 rounded bg-neutral-100 font-mono text-[11px] text-neutral-800">
+            defined in <span className="font-semibold text-neutral-700 dark:text-neutral-300">PriceCurve.sol</span>. Matches when{' '}
+            <code className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 font-mono text-[11px] text-neutral-800 dark:text-neutral-200">
               BuyPrice(t) ≥ SellPrice(t)
             </code>.
           </p>
@@ -211,12 +211,12 @@ export default function InteractiveCurveSimulator() {
         {/* Convergence / Match Status Pill */}
         <div className="flex items-center gap-2 shrink-0">
           {isMatchable ? (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 font-bold text-xs shadow-sm transition-all animate-curve-pulse">
-              <Zap className="w-4 h-4 text-emerald-600 fill-current" />
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs shadow-sm transition-all animate-curve-pulse">
+              <Zap className="w-4 h-4 text-emerald-600 dark:text-emerald-400 fill-current" />
               <span>⚡ Keeper Match Condition Met!</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-600 font-semibold text-xs">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 font-semibold text-xs">
               <span className="h-2 w-2 rounded-full bg-amber-400" />
               <span>Price Discovery in Progress</span>
             </div>
@@ -228,7 +228,7 @@ export default function InteractiveCurveSimulator() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6">
         {/* Main SVG Graph Column (2 Columns wide) */}
         <div className="lg:col-span-2 flex flex-col gap-4">
-          <div className="relative w-full aspect-[2.4/1] bg-neutral-50/70 rounded-2xl border border-black/5 p-2 overflow-hidden shadow-inner select-none">
+          <div className="relative w-full aspect-[2.4/1] bg-neutral-50/70 dark:bg-neutral-950/60 rounded-2xl border border-black/5 dark:border-white/10 p-2 overflow-hidden shadow-inner select-none">
             <svg viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`} className="w-full h-full">
               {/* Horizontal price grid lines */}
               {[2400, 2800, 3200, 3600].map((price) => {
@@ -242,14 +242,14 @@ export default function InteractiveCurveSimulator() {
                       y2={y}
                       stroke="currentColor"
                       strokeDasharray="4 4"
-                      className="text-neutral-200"
+                      className="text-neutral-200 dark:text-neutral-800"
                       strokeWidth="1"
                     />
                     <text
                       x={PADDING.left - 8}
                       y={y + 3}
                       textAnchor="end"
-                      className="fill-neutral-400 text-[9px] font-mono"
+                      className="fill-neutral-400 dark:fill-neutral-500 text-[9px] font-mono"
                     >
                       ${price}
                     </text>
@@ -269,14 +269,14 @@ export default function InteractiveCurveSimulator() {
                       y2={SVG_HEIGHT - PADDING.bottom}
                       stroke="currentColor"
                       strokeDasharray="4 4"
-                      className="text-neutral-200"
+                      className="text-neutral-200 dark:text-neutral-800"
                       strokeWidth="0.8"
                     />
                     <text
                       x={x}
                       y={SVG_HEIGHT - PADDING.bottom + 16}
                       textAnchor="middle"
-                      className="fill-neutral-400 text-[9px] font-mono"
+                      className="fill-neutral-400 dark:fill-neutral-500 text-[9px] font-mono"
                     >
                       {t}s
                     </text>
@@ -332,7 +332,7 @@ export default function InteractiveCurveSimulator() {
                 y2={SVG_HEIGHT - PADDING.bottom}
                 stroke="currentColor"
                 strokeWidth="1.8"
-                className="text-neutral-900 transition-all"
+                className="text-neutral-900 dark:text-neutral-100 transition-all"
               />
 
               {/* Current Buy Price Dot on cursor */}
@@ -340,7 +340,7 @@ export default function InteractiveCurveSimulator() {
                 cx={getSvgX(time)}
                 cy={getSvgY(currentBuyPrice)}
                 r="5"
-                className="fill-emerald-500 stroke-white"
+                className="fill-emerald-500 stroke-white dark:stroke-neutral-900"
                 strokeWidth="2"
               />
 
@@ -349,20 +349,20 @@ export default function InteractiveCurveSimulator() {
                 cx={getSvgX(time)}
                 cy={getSvgY(currentSellPrice)}
                 r="5"
-                className="fill-blue-500 stroke-white"
+                className="fill-blue-500 stroke-white dark:stroke-neutral-900"
                 strokeWidth="2"
               />
             </svg>
           </div>
 
           {/* Controls Bar (Play/Pause, Reset, Speed multipliers, Time Slider) */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-3.5 bg-neutral-50 rounded-2xl border border-black/5">
+          <div className="flex flex-wrap items-center justify-between gap-4 p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-2xl border border-black/5 dark:border-white/10">
             <div className="flex items-center gap-2">
               {/* Play / Pause Toggle */}
               <button
                 type="button"
                 onClick={togglePlay}
-                className="h-9 w-9 rounded-full bg-black text-white flex items-center justify-center hover:opacity-85 transition-opacity cursor-pointer shadow-xs"
+                className="h-9 w-9 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center hover:opacity-85 transition-opacity cursor-pointer shadow-xs"
                 title={isPlaying ? 'Pause Simulator' : 'Play Simulator'}
               >
                 {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 ml-0.5 fill-current" />}
@@ -372,14 +372,14 @@ export default function InteractiveCurveSimulator() {
               <button
                 type="button"
                 onClick={() => setTime(0)}
-                className="h-9 w-9 rounded-full border border-neutral-200 bg-white text-neutral-600 flex items-center justify-center hover:border-black transition-colors cursor-pointer"
+                className="h-9 w-9 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 flex items-center justify-center hover:border-black dark:hover:border-white transition-colors cursor-pointer"
                 title="Reset Time to 0s"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
 
               {/* Speed Multipliers */}
-              <div className="flex items-center gap-1 ml-2 bg-neutral-200/60 p-1 rounded-full">
+              <div className="flex items-center gap-1 ml-2 bg-neutral-200/60 dark:bg-neutral-800 p-1 rounded-full">
                 {[1, 5, 10].map((speed) => (
                   <button
                     key={speed}
@@ -387,8 +387,8 @@ export default function InteractiveCurveSimulator() {
                     onClick={() => setPlaybackSpeed(speed)}
                     className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
                       playbackSpeed === speed
-                        ? 'bg-white text-black shadow-xs'
-                        : 'text-neutral-500 hover:text-black'
+                        ? 'bg-white dark:bg-neutral-700 text-black dark:text-white shadow-xs'
+                        : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
                     }`}
                   >
                     {speed}x
@@ -399,7 +399,7 @@ export default function InteractiveCurveSimulator() {
 
             {/* Time Scrub Slider */}
             <div className="flex items-center gap-3 flex-1 max-w-xs min-w-[200px]">
-              <span className="text-[10.5px] font-mono text-neutral-500 font-bold shrink-0">
+              <span className="text-[10.5px] font-mono text-neutral-500 dark:text-neutral-400 font-bold shrink-0">
                 t = {Math.round(time)}s
               </span>
               <input
@@ -409,7 +409,7 @@ export default function InteractiveCurveSimulator() {
                 step="1"
                 value={Math.round(time)}
                 onChange={(e) => setTime(Number(e.target.value))}
-                className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black"
+                className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-black dark:accent-white"
               />
             </div>
           </div>
@@ -418,56 +418,56 @@ export default function InteractiveCurveSimulator() {
         {/* Right Sidebar Column: Metrics & Sliders (1 Column wide) */}
         <div className="flex flex-col gap-4">
           {/* Live Metrics Box */}
-          <div className="p-4.5 rounded-2xl bg-neutral-50 border border-black/5 flex flex-col gap-3">
+          <div className="p-4.5 rounded-2xl bg-neutral-50 dark:bg-neutral-950/60 border border-black/5 dark:border-white/10 flex flex-col gap-3">
             <div className="flex justify-between items-center text-xs">
-              <span className="flex items-center gap-1.5 font-bold text-emerald-600">
+              <span className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
                 <TrendingDown className="w-3.5 h-3.5" /> Buy Bid Price:
               </span>
-              <span className="font-mono font-bold text-black text-sm">
+              <span className="font-mono font-bold text-black dark:text-white text-sm">
                 ${currentBuyPrice.toFixed(2)}
               </span>
             </div>
 
             <div className="flex justify-between items-center text-xs">
-              <span className="flex items-center gap-1.5 font-bold text-blue-600">
+              <span className="flex items-center gap-1.5 font-bold text-blue-600 dark:text-blue-400">
                 <TrendingUp className="w-3.5 h-3.5" /> Sell Ask Price:
               </span>
-              <span className="font-mono font-bold text-black text-sm">
+              <span className="font-mono font-bold text-black dark:text-white text-sm">
                 ${currentSellPrice.toFixed(2)}
               </span>
             </div>
 
-            <div className="border-t border-neutral-200 pt-2.5 flex justify-between items-center text-xs">
-              <span className="text-neutral-500 font-medium">
+            <div className="border-t border-neutral-200 dark:border-neutral-800 pt-2.5 flex justify-between items-center text-xs">
+              <span className="text-neutral-500 dark:text-neutral-400 font-medium">
                 {isMatchable ? 'Execution Settlement:' : 'Current Spread:'}
               </span>
-              <span className="font-mono font-bold text-black">
+              <span className="font-mono font-bold text-black dark:text-white">
                 {isMatchable ? `$${settlementPrice.toFixed(2)}` : `$${currentSpread.toFixed(2)}`}
               </span>
             </div>
 
-            <div className="flex justify-between items-center text-[11px] text-neutral-500">
+            <div className="flex justify-between items-center text-[11px] text-neutral-500 dark:text-neutral-400">
               <span>Keeper Fee (0.1%):</span>
-              <span className="font-mono text-emerald-600 font-semibold">
+              <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
                 +${keeperFee.toFixed(3)}
               </span>
             </div>
           </div>
 
           {/* Curve Configuration Box (Sliders) */}
-          <div className="flex flex-col gap-3.5 p-4.5 rounded-2xl border border-black/5 bg-white">
-            <div className="flex items-center justify-between pb-1 border-b border-black/5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1.5">
+          <div className="flex flex-col gap-3.5 p-4.5 rounded-2xl border border-black/5 dark:border-white/10 bg-white dark:bg-neutral-950/60">
+            <div className="flex items-center justify-between pb-1 border-b border-black/5 dark:border-white/10">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
                 <Info className="w-3.5 h-3.5" /> Curve Configuration
               </h4>
-              <span className="text-[10px] font-mono text-neutral-400">P(t) = P₀ + s·t</span>
+              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">P(t) = P₀ + s·t</span>
             </div>
 
             {/* Buy Start Price Slider */}
             <div className="flex flex-col gap-1">
               <div className="flex justify-between text-[11px]">
-                <span className="text-neutral-600 font-medium">Buy Start P₀ (Bid):</span>
-                <span className="font-mono font-bold text-emerald-600">${buyStart}</span>
+                <span className="text-neutral-600 dark:text-neutral-300 font-medium">Buy Start P₀ (Bid):</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">${buyStart}</span>
               </div>
               <input
                 type="range"
@@ -476,15 +476,15 @@ export default function InteractiveCurveSimulator() {
                 step="50"
                 value={buyStart}
                 onChange={(e) => setBuyStart(Number(e.target.value))}
-                className="w-full h-1 bg-neutral-200 rounded appearance-none cursor-pointer accent-emerald-500"
+                className="w-full h-1 bg-neutral-200 dark:bg-neutral-800 rounded appearance-none cursor-pointer accent-emerald-500"
               />
             </div>
 
             {/* Buy Slope Slider: supports both +ve and -ve slopes */}
             <div className="flex flex-col gap-1">
               <div className="flex justify-between text-[11px]">
-                <span className="text-neutral-600 font-medium">Buy Slope (s):</span>
-                <span className="font-mono font-bold text-emerald-600">
+                <span className="text-neutral-600 dark:text-neutral-300 font-medium">Buy Slope (s):</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                   {buySlope > 0 ? `+${buySlope}` : buySlope} /s
                 </span>
               </div>
@@ -495,15 +495,15 @@ export default function InteractiveCurveSimulator() {
                 step="0.1"
                 value={buySlope}
                 onChange={(e) => setBuySlope(Number(e.target.value))}
-                className="w-full h-1 bg-neutral-200 rounded appearance-none cursor-pointer accent-emerald-500"
+                className="w-full h-1 bg-neutral-200 dark:bg-neutral-800 rounded appearance-none cursor-pointer accent-emerald-500"
               />
             </div>
 
             {/* Sell Start Price Slider */}
             <div className="flex flex-col gap-1">
               <div className="flex justify-between text-[11px]">
-                <span className="text-neutral-600 font-medium">Sell Start P₀ (Ask):</span>
-                <span className="font-mono font-bold text-blue-600">${sellStart}</span>
+                <span className="text-neutral-600 dark:text-neutral-300 font-medium">Sell Start P₀ (Ask):</span>
+                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">${sellStart}</span>
               </div>
               <input
                 type="range"
@@ -512,15 +512,15 @@ export default function InteractiveCurveSimulator() {
                 step="50"
                 value={sellStart}
                 onChange={(e) => setSellStart(Number(e.target.value))}
-                className="w-full h-1 bg-neutral-200 rounded appearance-none cursor-pointer accent-blue-500"
+                className="w-full h-1 bg-neutral-200 dark:bg-neutral-800 rounded appearance-none cursor-pointer accent-blue-500"
               />
             </div>
 
             {/* Sell Slope Slider: supports both +ve and -ve slopes */}
             <div className="flex flex-col gap-1">
               <div className="flex justify-between text-[11px]">
-                <span className="text-neutral-600 font-medium">Sell Slope (s):</span>
-                <span className="font-mono font-bold text-blue-600">
+                <span className="text-neutral-600 dark:text-neutral-300 font-medium">Sell Slope (s):</span>
+                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
                   {sellSlope > 0 ? `+${sellSlope}` : sellSlope} /s
                 </span>
               </div>
@@ -531,32 +531,32 @@ export default function InteractiveCurveSimulator() {
                 step="0.1"
                 value={sellSlope}
                 onChange={(e) => setSellSlope(Number(e.target.value))}
-                className="w-full h-1 bg-neutral-200 rounded appearance-none cursor-pointer accent-blue-500"
+                className="w-full h-1 bg-neutral-200 dark:bg-neutral-800 rounded appearance-none cursor-pointer accent-blue-500"
               />
             </div>
 
             {/* Scenario Presets */}
-            <div className="pt-2 flex flex-col gap-1.5 border-t border-black/5">
-              <span className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">Presets:</span>
+            <div className="pt-2 flex flex-col gap-1.5 border-t border-black/5 dark:border-white/10">
+              <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-semibold uppercase tracking-wider">Presets:</span>
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
                   onClick={() => applyPreset('standard')}
-                  className="px-2 py-1 rounded text-[9.5px] font-bold bg-neutral-100 text-neutral-700 hover:bg-neutral-200 cursor-pointer text-center"
+                  className="px-2 py-1 rounded text-[9.5px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 cursor-pointer text-center transition-colors"
                 >
                   Standard
                 </button>
                 <button
                   type="button"
                   onClick={() => applyPreset('fast')}
-                  className="px-2 py-1 rounded text-[9.5px] font-bold bg-neutral-100 text-neutral-700 hover:bg-neutral-200 cursor-pointer text-center"
+                  className="px-2 py-1 rounded text-[9.5px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 cursor-pointer text-center transition-colors"
                 >
                   Fast Match
                 </button>
                 <button
                   type="button"
                   onClick={() => applyPreset('both-negative')}
-                  className="px-2 py-1 rounded text-[9.5px] font-bold bg-neutral-100 text-neutral-700 hover:bg-neutral-200 cursor-pointer text-center"
+                  className="px-2 py-1 rounded text-[9.5px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 cursor-pointer text-center transition-colors"
                   title="Both slopes negative: Buy -0.5/s, Sell -1.5/s"
                 >
                   Both -ve Slopes
@@ -564,7 +564,7 @@ export default function InteractiveCurveSimulator() {
                 <button
                   type="button"
                   onClick={() => applyPreset('both-positive')}
-                  className="px-2 py-1 rounded text-[9.5px] font-bold bg-neutral-100 text-neutral-700 hover:bg-neutral-200 cursor-pointer text-center"
+                  className="px-2 py-1 rounded text-[9.5px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 cursor-pointer text-center transition-colors"
                   title="Both slopes positive: Buy +1.8/s, Sell +0.8/s"
                 >
                   Both +ve Slopes
@@ -576,59 +576,59 @@ export default function InteractiveCurveSimulator() {
       </div>
 
       {/* ── Real-World Example Walkthrough: Alice & Bob (ETH/USDC) ── */}
-      <div className="mt-8 pt-6 border-t border-black/5">
-        <div className="rounded-2xl bg-neutral-50/70 border border-black/5 p-5 sm:p-6">
+      <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/10">
+        <div className="rounded-2xl bg-neutral-50/70 dark:bg-neutral-950/60 border border-black/5 dark:border-white/10 p-5 sm:p-6">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="w-4 h-4 text-[#FFC517]" />
-            <h4 className="text-sm font-bold uppercase tracking-wider text-black">
+            <h4 className="text-sm font-bold uppercase tracking-wider text-black dark:text-white">
               Example Walkthrough: Alice & Bob (ETH / USDC Pair)
             </h4>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             {/* Alice Card */}
-            <div className="p-4 rounded-xl bg-white border border-emerald-500/20 shadow-xs">
+            <div className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-emerald-500/20 dark:border-emerald-500/30 shadow-xs">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-emerald-600">Alice (Buyer)</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-bold">
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">Alice (Buyer)</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold">
                   Buy 1.0 ETH
                 </span>
               </div>
-              <p className="text-neutral-600 leading-relaxed">
+              <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed">
                 Alice wants to buy ETH. She can set a positive or negative slope. Here, her bid starts at{' '}
-                <strong>${buyStart}</strong> with slope{' '}
-                <strong>{buySlope > 0 ? `+${buySlope}` : buySlope}/s</strong>.
+                <strong className="text-neutral-900 dark:text-neutral-100">${buyStart}</strong> with slope{' '}
+                <strong className="text-neutral-900 dark:text-neutral-100">{buySlope > 0 ? `+${buySlope}` : buySlope}/s</strong>.
               </p>
             </div>
 
             {/* Bob Card */}
-            <div className="p-4 rounded-xl bg-white border border-blue-500/20 shadow-xs">
+            <div className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-blue-500/20 dark:border-blue-500/30 shadow-xs">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-blue-600">Bob (Seller)</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-700 font-bold">
+                <span className="font-bold text-blue-600 dark:text-blue-400">Bob (Seller)</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold">
                   Sell 1.0 ETH
                 </span>
               </div>
-              <p className="text-neutral-600 leading-relaxed">
+              <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed">
                 Bob wants to sell ETH. He can also configure a positive or negative slope. Here, his ask starts at{' '}
-                <strong>${sellStart}</strong> with slope{' '}
-                <strong>{sellSlope > 0 ? `+${sellSlope}` : sellSlope}/s</strong>.
+                <strong className="text-neutral-900 dark:text-neutral-100">${sellStart}</strong> with slope{' '}
+                <strong className="text-neutral-900 dark:text-neutral-100">{sellSlope > 0 ? `+${sellSlope}` : sellSlope}/s</strong>.
               </p>
             </div>
 
             {/* Keeper Settlement Card */}
-            <div className="p-4 rounded-xl bg-white border border-amber-500/20 shadow-xs">
+            <div className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-amber-500/20 dark:border-amber-500/30 shadow-xs">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-amber-600">Autonomous Keeper</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-700 font-bold">
+                <span className="font-bold text-amber-600 dark:text-amber-400">Autonomous Keeper</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold">
                   0.1% Reward
                 </span>
               </div>
-              <p className="text-neutral-600 leading-relaxed">
-                Keepers scan for <code>BuyPrice(t) ≥ SellPrice(t)</code>. At{' '}
-                <strong>t = {crossingTime !== null ? `${crossingTime}s` : 'N/A'}</strong>, prices cross at{' '}
-                <strong>${crossingPrice?.toFixed(2) ?? '3,000.00'}</strong>. The keeper executes the atomic swap on-chain
-                (+${keeperFee.toFixed(3)} bounty) and <strong>the curves stop moving once settled</strong>.
+              <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                Keepers scan for <code className="px-1 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">BuyPrice(t) ≥ SellPrice(t)</code>. At{' '}
+                <strong className="text-neutral-900 dark:text-neutral-100">t = {crossingTime !== null ? `${crossingTime}s` : 'N/A'}</strong>, prices cross at{' '}
+                <strong className="text-neutral-900 dark:text-neutral-100">${crossingPrice?.toFixed(2) ?? '3,000.00'}</strong>. The keeper executes the atomic swap on-chain
+                (+${keeperFee.toFixed(3)} bounty) and <strong className="text-neutral-900 dark:text-neutral-100">the curves stop moving once settled</strong>.
               </p>
             </div>
           </div>

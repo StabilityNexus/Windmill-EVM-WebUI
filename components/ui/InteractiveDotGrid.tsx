@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { useTheme } from 'next-themes';
 
 interface InteractiveDotGridProps {
   dotSpacing?: number;
@@ -14,6 +15,14 @@ export default function InteractiveDotGrid({
   className = '',
 }: InteractiveDotGridProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { resolvedTheme } = useTheme();
+
+  // Read from a ref inside the render loop so the animation effect below
+  // doesn't need to restart (and reset dot positions/listeners) on theme change.
+  const themeRef = useRef(resolvedTheme);
+  useEffect(() => {
+    themeRef.current = resolvedTheme;
+  }, [resolvedTheme]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -115,8 +124,16 @@ export default function InteractiveDotGrid({
       mouse.targetY = -1000;
     };
 
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    document.addEventListener('mouseleave', handleMouseLeave);
+    // Respect prefers-reduced-motion: skip cursor-driven deflection so dots
+    // stay at rest instead of following the pointer.
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!prefersReducedMotion) {
+      window.addEventListener('mousemove', handleMouseMove, { passive: true });
+      document.addEventListener('mouseleave', handleMouseLeave);
+    }
 
     // Spring physics configuration
     const spring = 0.08;
@@ -177,9 +194,14 @@ export default function InteractiveDotGrid({
           alpha = 0.22 + ratio * 0.45; // Darker/more prominent when hovered
         }
 
+        // Light-on-dark in dark mode, dark-on-light in light mode, so the
+        // grid keeps comparable contrast against the theme background.
+        const isDark = themeRef.current === 'dark';
         ctx.beginPath();
         ctx.arc(dot.currentX, dot.currentY, currentDotRadius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(15, 15, 15, ${alpha})`;
+        ctx.fillStyle = isDark
+          ? `rgba(255, 255, 255, ${alpha})`
+          : `rgba(15, 15, 15, ${alpha})`;
         ctx.fill();
       }
 
