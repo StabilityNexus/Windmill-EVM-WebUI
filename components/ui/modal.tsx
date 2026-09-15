@@ -78,7 +78,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       aria-labelledby={titleId}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-auto"
+      className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto px-4 pt-24 pb-4 pointer-events-auto"
     >
       {/* Backdrop */}
       <div
@@ -88,7 +88,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 text-black dark:text-white shadow-2xl transition-all duration-300">
+      <div className="relative my-auto max-h-[75vh] w-full max-w-sm overflow-y-auto rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 text-black dark:text-white shadow-2xl transition-all duration-300">
         <div className="mb-5 flex items-center justify-between">
           <h3 id={titleId} className="text-lg font-bold tracking-tight text-black dark:text-white">
             {title}
