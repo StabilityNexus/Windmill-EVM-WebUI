@@ -58,8 +58,6 @@ export function useScrollRevealChildren<T extends HTMLElement>(
     const container = containerRef.current;
     if (!container) return;
 
-    const children = container.querySelectorAll('[data-reveal]');
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -72,8 +70,31 @@ export function useScrollRevealChildren<T extends HTMLElement>(
       { threshold, rootMargin },
     );
 
-    children.forEach((child) => observer.observe(child));
-    return () => observer.disconnect();
+    const scanForRevealTargets = (root: ParentNode) => {
+      root.querySelectorAll('[data-reveal]').forEach((el) => observer.observe(el));
+    };
+
+    // Initial pass over whatever is already mounted
+    scanForRevealTargets(container);
+
+    // Re-scan whenever the container's subtree changes, so content mounted
+    // later (e.g. switching tabs that unmount/remount their content) still
+    // gets observed instead of staying invisible forever.
+    const mutationObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return;
+          if (node.matches('[data-reveal]')) observer.observe(node);
+          scanForRevealTargets(node);
+        });
+      }
+    });
+    mutationObserver.observe(container, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      mutationObserver.disconnect();
+    };
   }, [threshold, rootMargin]);
 
   return containerRef;
