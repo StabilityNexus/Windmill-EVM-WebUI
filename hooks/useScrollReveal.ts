@@ -45,8 +45,13 @@ export function useScrollReveal<T extends HTMLElement>(
 // ─── Children of a Container ────────────────────────────────────
 
 /**
- * Observes every child with `[data-reveal]` inside the container.
- * Each child independently gets the `revealed` class when visible.
+ * Observes every `[data-reveal]` descendant of the container and adds the
+ * `revealed` class when each one enters the viewport, independently.
+ *
+ * Also tracks DOM mutations within the container, so `[data-reveal]`
+ * elements mounted after the initial render — e.g. switching between tabs
+ * that unmount/remount their content — are observed too, instead of only
+ * whatever existed at the moment this hook's effect first ran.
  */
 export function useScrollRevealChildren<T extends HTMLElement>(
   options: ScrollRevealOptions = {},
