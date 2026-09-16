@@ -67,10 +67,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Resolve the path to the Keeper2 project relative to the WebUI project.
-  // WebUI lives at  …/Windmill-EVM-Contracts/Windmill-EVM-WebUI
-  // Keeper2 lives at …/Windmill-EVM-Contracts/Windmill-EVM-Keeper2
-  const keeperDir = path.resolve(process.cwd(), "..", "Windmill-EVM-Keeper2");
+  // Resolve the path to the Keeper project. Defaults to a sibling folder
+  // (the convention used by the org's repos — e.g. …/GSSOC 2027/Windmill-EVM-WebUI
+  // and …/GSSOC 2027/Windmill-EVM-Keeper) but is overridable via
+  // KEEPER_REPO_PATH for contributors who clone it elsewhere.
+  const keeperDir = process.env.KEEPER_REPO_PATH
+    ? path.resolve(process.env.KEEPER_REPO_PATH)
+    : path.resolve(process.cwd(), "..", "Windmill-EVM-Keeper");
   const fileName = ["src", "index.js"].join("/");
   const entryPoint = String(path.resolve(keeperDir, fileName));
 
@@ -78,7 +81,11 @@ export async function POST(request: NextRequest) {
   pushLog(`[api] Entry: ${entryPoint}`);
 
   try {
-    const child = spawn("node", [entryPoint], {
+    // Use the exact Node binary already running this server (process.execPath)
+    // rather than the bare "node" command — spawning by name alone can fail
+    // with ENOENT on Windows when the running Node install (e.g. via Volta)
+    // isn't resolvable through the child process's inherited PATH.
+    const child = spawn(process.execPath, [entryPoint], {
       cwd: keeperDir,
       env: { ...process.env },          // inherits Keeper2/.env via dotenv inside the keeper
       stdio: ["ignore", "pipe", "pipe"],
