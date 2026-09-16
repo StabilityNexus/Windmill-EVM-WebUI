@@ -30,11 +30,17 @@ function KeeperBotPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
-  const logEndRef = useRef<HTMLDivElement>(null);
+  const logContainerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom whenever new logs arrive
+  // Scroll the log box itself to its bottom whenever new logs arrive.
+  // Deliberately NOT scrollIntoView() on an anchor element here — that
+  // scrolls every scrollable ancestor (including the page), so with the
+  // keeper polling every couple seconds it kept yanking the whole page's
+  // scroll position out from under the user while they tried to scroll.
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = logContainerRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
   }, [logs]);
 
   // Poll status + logs
@@ -239,7 +245,7 @@ function KeeperBotPanel() {
       </div>
 
       {/* Live log viewer */}
-      <div className="bg-neutral-950 rounded-xl p-4 max-h-72 overflow-y-auto font-mono text-[11px] text-neutral-300 leading-relaxed">
+      <div ref={logContainerRef} className="bg-neutral-950 rounded-xl p-4 max-h-72 overflow-y-auto font-mono text-[11px] text-neutral-300 leading-relaxed">
         {logs.length === 0 ? (
           <div className="text-neutral-600 italic py-6 text-center text-xs">
             No logs yet. Click &ldquo;Start Keeper Bot&rdquo; to begin.
@@ -262,7 +268,6 @@ function KeeperBotPanel() {
             </div>
           ))
         )}
-        <div ref={logEndRef} />
       </div>
     </div>
   );
