@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     // isn't resolvable through the child process's inherited PATH.
     const child = spawn(process.execPath, [entryPoint], {
       cwd: keeperDir,
-      env: { ...process.env },          // inherits Keeper2/.env via dotenv inside the keeper
+      env: { ...process.env },          // inherits the keeper's own .env via dotenv inside it
       stdio: ["ignore", "pipe", "pipe"],
       detached: false,                    // keep it tied to this server so we can manage it
       windowsHide: true,
@@ -143,12 +143,58 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// ── Keeper telemetry (real health, not a guess) ──────────────────────────
+// The keeper process itself exposes a read-only GET /health document (see
+// Windmill-EVM-Keeper's src/telemetry-server.js) whenever TELEMETRY_PORT is
+// set in its .env. Ask it directly instead of inferring health from stdout
+// activity — it already tracks isHealthy, consecutiveFailures, lastError,
+// and lastCycle internally.
+const DEFAULT_TELEMETRY_PORT = 8081;
+const TELEMETRY_FETCH_TIMEOUT_MS = 2000;
+
+interface KeeperTelemetry {
+  id?: string;
+  address?: string | null;
+  chainId?: number;
+  startedAt?: string | null;
+  stopped?: boolean;
+  uptimeSeconds?: number;
+  isHealthy?: boolean;
+  consecutiveFailures?: number;
+  lastError?: unknown;
+  lastCycle?: unknown;
+}
+
+async function fetchKeeperTelemetry(): Promise<{ ok: boolean; data: KeeperTelemetry | null; error?: string }> {
+  const port = Number(process.env.KEEPER_TELEMETRY_PORT || DEFAULT_TELEMETRY_PORT);
+  const host = process.env.KEEPER_TELEMETRY_HOST || "127.0.0.1";
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TELEMETRY_FETCH_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(`http://${host}:${port}/health`, { signal: controller.signal });
+    const data = (await res.json()) as KeeperTelemetry;
+    return { ok: true, data };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, data: null, error: message };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ── GET /api/keeper  →  return current status + recent logs ─────────────
 export async function GET() {
+  // Only worth asking for telemetry if we actually spawned a process —
+  // avoids a pointless timeout wait on every poll while stopped.
+  const telemetry = keeper.running ? await fetchKeeperTelemetry() : { ok: false, data: null };
+
   return NextResponse.json({
     running: keeper.running,
     pid: keeper.pid,
     startedAt: keeper.startedAt,
     logs: keeper.logs,
+    telemetry,
   });
 }
