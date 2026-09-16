@@ -77,6 +77,11 @@ export function useScrollRevealChildren<T extends HTMLElement>(
     // Initial pass over whatever is already mounted
     scanForRevealTargets(container);
 
+    const unobserveRevealTargets = (root: Element) => {
+      if (root.matches('[data-reveal]')) observer.unobserve(root);
+      root.querySelectorAll('[data-reveal]').forEach((el) => observer.unobserve(el));
+    };
+
     // Re-scan whenever the container's subtree changes, so content mounted
     // later (e.g. switching tabs that unmount/remount their content) still
     // gets observed instead of staying invisible forever.
@@ -86,6 +91,13 @@ export function useScrollRevealChildren<T extends HTMLElement>(
           if (!(node instanceof Element)) return;
           if (node.matches('[data-reveal]')) observer.observe(node);
           scanForRevealTargets(node);
+        });
+
+        // Stop tracking elements that just left the DOM (e.g. the other tab's
+        // content) so repeated switching doesn't pile up stale observations.
+        mutation.removedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return;
+          unobserveRevealTargets(node);
         });
       }
     });
