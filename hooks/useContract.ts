@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useWallet } from '@/context/WalletContext';
-import { WINDMILL_EXCHANGE_ABI, ERC20_ABI, SUPPORTED_CHAINS } from '@/lib/contractConfig';
+import { WINDMILL_EXCHANGE_ABI, ERC20_ABI, SUPPORTED_CHAINS, DEFAULT_CHAIN_ID } from '@/lib/contractConfig';
 
 // ── Minimal ethers-free ABI encoding/provider ───────────────────────
 // We use the browser's built-in fetch + window.ethereum for calls
@@ -20,15 +20,18 @@ interface ContractCallResult {
 export function useContract() {
   const { fullAddress, chainId, provider, isConnected } = useWallet();
 
+  // Read-only pages (e.g. /stats) need contract data before any wallet is
+  // connected, so reads fall back to the default configured chain instead
+  // of requiring `chainId` from a connected wallet.
+  const readChainId = chainId ?? DEFAULT_CHAIN_ID;
+
   const contractAddress = useMemo(() => {
-    if (!chainId) return null;
-    return SUPPORTED_CHAINS[chainId]?.contractAddress || null;
-  }, [chainId]);
+    return SUPPORTED_CHAINS[readChainId]?.contractAddress || null;
+  }, [readChainId]);
 
   const rpcUrl = useMemo(() => {
-    if (!chainId) return null;
-    return SUPPORTED_CHAINS[chainId]?.rpcUrl || null;
-  }, [chainId]);
+    return SUPPORTED_CHAINS[readChainId]?.rpcUrl || null;
+  }, [readChainId]);
 
   // ── Read contract (via RPC or provider) ───────────────────────────
   const readContract = useCallback(
@@ -213,6 +216,9 @@ export function useContract() {
   return {
     contractAddress,
     isReady: isConnected && !!contractAddress,
+    // True once a contract address resolves for the read chain (connected or
+    // default) — view calls work via the public RPC fallback with no wallet.
+    canRead: !!contractAddress,
     readContract,
     writeContract,
     readERC20,
