@@ -67,10 +67,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Resolve the path to the Keeper2 project relative to the WebUI project.
-  // WebUI lives at  …/Windmill-EVM-Contracts/Windmill-EVM-WebUI
-  // Keeper2 lives at …/Windmill-EVM-Contracts/Windmill-EVM-Keeper2
-  const keeperDir = path.resolve(process.cwd(), "..", "Windmill-EVM-Keeper2");
+  // Resolve the path to the Keeper project. Defaults to a sibling folder
+  // (the convention used by the org's repos — e.g. …/GSSOC 2027/Windmill-EVM-WebUI
+  // and …/GSSOC 2027/Windmill-EVM-Keeper) but is overridable via
+  // KEEPER_REPO_PATH for contributors who clone it elsewhere.
+  const keeperDir = process.env.KEEPER_REPO_PATH
+    ? path.resolve(process.env.KEEPER_REPO_PATH)
+    : path.resolve(process.cwd(), "..", "Windmill-EVM-Keeper");
   const fileName = ["src", "index.js"].join("/");
   const entryPoint = String(path.resolve(keeperDir, fileName));
 
@@ -78,9 +81,13 @@ export async function POST(request: NextRequest) {
   pushLog(`[api] Entry: ${entryPoint}`);
 
   try {
-    const child = spawn("node", [entryPoint], {
+    // Use the exact Node binary already running this server (process.execPath)
+    // rather than the bare "node" command — spawning by name alone can fail
+    // with ENOENT on Windows when the running Node install (e.g. via Volta)
+    // isn't resolvable through the child process's inherited PATH.
+    const child = spawn(process.execPath, [entryPoint], {
       cwd: keeperDir,
-      env: { ...process.env },          // inherits Keeper2/.env via dotenv inside the keeper
+      env: { ...process.env },          // inherits the keeper's own .env via dotenv inside it
       stdio: ["ignore", "pipe", "pipe"],
       detached: false,                    // keep it tied to this server so we can manage it
       windowsHide: true,
@@ -136,12 +143,58 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// ── Keeper telemetry (real health, not a guess) ──────────────────────────
+// The keeper process itself exposes a read-only GET /health document (see
+// Windmill-EVM-Keeper's src/telemetry-server.js) whenever TELEMETRY_PORT is
+// set in its .env. Ask it directly instead of inferring health from stdout
+// activity — it already tracks isHealthy, consecutiveFailures, lastError,
+// and lastCycle internally.
+const DEFAULT_TELEMETRY_PORT = 8081;
+const TELEMETRY_FETCH_TIMEOUT_MS = 2000;
+
+interface KeeperTelemetry {
+  id?: string;
+  address?: string | null;
+  chainId?: number;
+  startedAt?: string | null;
+  stopped?: boolean;
+  uptimeSeconds?: number;
+  isHealthy?: boolean;
+  consecutiveFailures?: number;
+  lastError?: unknown;
+  lastCycle?: unknown;
+}
+
+async function fetchKeeperTelemetry(): Promise<{ ok: boolean; data: KeeperTelemetry | null; error?: string }> {
+  const port = Number(process.env.KEEPER_TELEMETRY_PORT || DEFAULT_TELEMETRY_PORT);
+  const host = process.env.KEEPER_TELEMETRY_HOST || "127.0.0.1";
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TELEMETRY_FETCH_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(`http://${host}:${port}/health`, { signal: controller.signal });
+    const data = (await res.json()) as KeeperTelemetry;
+    return { ok: true, data };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, data: null, error: message };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ── GET /api/keeper  →  return current status + recent logs ─────────────
 export async function GET() {
+  // Only worth asking for telemetry if we actually spawned a process —
+  // avoids a pointless timeout wait on every poll while stopped.
+  const telemetry = keeper.running ? await fetchKeeperTelemetry() : { ok: false, data: null };
+
   return NextResponse.json({
     running: keeper.running,
     pid: keeper.pid,
     startedAt: keeper.startedAt,
     logs: keeper.logs,
+    telemetry,
   });
 }
