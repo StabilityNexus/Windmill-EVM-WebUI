@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -16,39 +16,35 @@ import {
   NavbarButton,
 } from '@/components/ui/resizable-navbar';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Modal } from '@/components/ui/modal';
+import { Check, ChevronDown, Copy, LogOut, Wallet as WalletIcon } from 'lucide-react';
+import { NetworkIcon } from '@/components/ui/network-icon';
 
 export default function Navbar() {
-  const { isConnected, address, network, setWalletModalOpen, disconnectWallet, switchNetwork } = useWallet();
+  const { isConnected, address, fullAddress, network, setWalletModalOpen, disconnectWallet, switchNetwork } = useWallet();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [networkDropdownOpen, setNetworkDropdownOpen] = useState(false);
-  const networkDropdownRef = useRef<HTMLDivElement>(null);
+  const [networkModalOpen, setNetworkModalOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [addressCopied, setAddressCopied] = useState(false);
 
   const networks = ['Localhost', 'Sepolia', 'Ethereum', 'Base', 'Polygon', 'BSC', 'ETC'];
 
-  useEffect(() => {
-    if (!networkDropdownOpen) return;
+  const handleCopyAddress = async () => {
+    if (!fullAddress) return;
+    try {
+      await navigator.clipboard.writeText(fullAddress);
+      setAddressCopied(true);
+      setTimeout(() => setAddressCopied(false), 2000);
+    } catch {
+      // Clipboard access denied — silently ignore
+    }
+  };
 
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (!networkDropdownRef.current?.contains(event.target as Node)) {
-        setNetworkDropdownOpen(false);
-      }
-    };
-
-    const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setNetworkDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('keydown', handleEscapeKey);
-
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
-  }, [networkDropdownOpen]);
+  const handleDisconnect = () => {
+    disconnectWallet();
+    setAccountModalOpen(false);
+  };
 
   const navItems = [
     { name: 'Home', link: '/' },
@@ -80,7 +76,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Nav Items */}
-          <NavItems items={navItems} />
+          <NavItems items={navItems} className="mx-auto" />
 
           {/* Wallet Actions & Theme Switcher */}
           <div className="relative z-30 flex items-center gap-2.5 shrink-0 justify-self-end pointer-events-auto">
@@ -89,49 +85,33 @@ export default function Navbar() {
 
             {isConnected ? (
               <div className="flex items-center gap-2">
-                {/* Network select indicator */}
-                <div className="relative" ref={networkDropdownRef}>
-                  <button
-                    type="button"
-                    onClick={() => setNetworkDropdownOpen(!networkDropdownOpen)}
-                    className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-[10px] font-bold hover:bg-neutral-100 transition-colors uppercase tracking-wider text-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 cursor-pointer"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    {network} ▾
-                  </button>
-                  {networkDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-32 rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-2xl z-50 dark:border-neutral-800 dark:bg-neutral-900">
-                      {networks.map((net) => (
-                        <button
-                          key={net}
-                          type="button"
-                          onClick={() => {
-                            switchNetwork(net);
-                            setNetworkDropdownOpen(false);
-                          }}
-                          className="w-full text-left rounded-xl px-3 py-1.5 text-[10px] font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-800 text-black dark:text-white transition-colors cursor-pointer"
-                        >
-                          {net}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {/* Network select segment (icon-only, compact) */}
+                <button
+                  type="button"
+                  onClick={() => setNetworkModalOpen(true)}
+                  aria-label={`Network: ${network}`}
+                  className="relative flex h-10 items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 shadow-sm transition-colors duration-200 cursor-pointer hover:bg-neutral-50 focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:focus:ring-white/20"
+                >
+                  <NetworkIcon name={network} className="h-5 w-5" />
+                  <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-800" />
+                  <ChevronDown className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
+                </button>
 
-                {/* Connected Wallet Disconnect CTA */}
-                <NavbarButton
-                  onClick={disconnectWallet}
-                  variant="dark"
-                  className="rounded-full !px-5 !py-2 text-xs font-bold text-white bg-black hover:bg-neutral-800 transition-colors border-none"
+                {/* Account segment */}
+                <button
+                  type="button"
+                  onClick={() => setAccountModalOpen(true)}
+                  className="flex h-10 items-center gap-1 rounded-full border border-neutral-200 bg-white px-3.5 text-xs font-bold text-black shadow-sm transition-colors duration-200 cursor-pointer hover:bg-neutral-50 focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 dark:focus:ring-white/20"
                 >
                   {address}
-                </NavbarButton>
+                  <ChevronDown className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
+                </button>
               </div>
             ) : (
               <NavbarButton
                 onClick={() => setWalletModalOpen(true)}
                 variant="dark"
-                className="rounded-full !px-5 !py-2 text-xs font-bold text-white bg-black hover:bg-neutral-800 transition-all duration-300 border-none shadow-sm"
+                className="flex h-10 items-center justify-center rounded-full px-4 text-xs font-bold text-white bg-black hover:bg-neutral-800 border-none shadow-sm focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20"
               >
                 Connect Wallet
               </NavbarButton>
@@ -193,19 +173,26 @@ export default function Navbar() {
               {/* Wallet Button */}
               {isConnected ? (
                 <div className="flex flex-col gap-3">
-                  <div className="flex justify-between items-center text-xs font-bold text-black dark:text-white border border-neutral-100 dark:border-neutral-800 rounded-xl px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/60">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNetworkModalOpen(true);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex justify-between items-center text-xs font-bold text-black dark:text-white border border-neutral-100 dark:border-neutral-800 rounded-xl px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/60 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20"
+                  >
                     <span>Network</span>
                     <span className="text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{network}</span>
-                  </div>
+                  </button>
                   <NavbarButton
                     onClick={() => {
-                      disconnectWallet();
+                      setAccountModalOpen(true);
                       setIsMobileMenuOpen(false);
                     }}
                     variant="dark"
                     className="w-full text-center py-2.5 rounded-xl text-xs"
                   >
-                    Disconnect {address}
+                    {address}
                   </NavbarButton>
                 </div>
               ) : (
@@ -224,6 +211,69 @@ export default function Navbar() {
           </MobileNavMenu>
         </MobileNav>
       </BaseNavbar>
+
+      {/* Network Switcher Modal */}
+      <Modal open={networkModalOpen} onClose={() => setNetworkModalOpen(false)} title="Switch Network">
+        <div className="flex flex-col gap-1.5">
+          {networks.map((net) => {
+            const isActive = net === network;
+            return (
+              <button
+                key={net}
+                type="button"
+                onClick={() => {
+                  switchNetwork(net);
+                  setNetworkModalOpen(false);
+                }}
+                className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors duration-200 cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20 ${
+                  isActive
+                    ? 'border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10'
+                    : 'border-neutral-100 dark:border-neutral-800/80 bg-neutral-50/50 dark:bg-neutral-800/40 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                }`}
+              >
+                <NetworkIcon name={net} className="h-9 w-9" />
+                <span className="flex-1 font-semibold text-black dark:text-white">{net}</span>
+                {isActive && (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Connected
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </Modal>
+
+      {/* Account Modal */}
+      <Modal open={accountModalOpen} onClose={() => setAccountModalOpen(false)} title="Account">
+        <div className="flex flex-col items-center text-center">
+          <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+            <WalletIcon className="w-7 h-7" />
+          </span>
+          <p className="text-base font-bold text-black dark:text-white">{address}</p>
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{network}</p>
+
+          <div className="mt-6 grid w-full grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={handleCopyAddress}
+              className="flex flex-col items-center gap-1.5 rounded-2xl border border-neutral-100 dark:border-neutral-800/80 bg-neutral-50/50 dark:bg-neutral-800/40 px-4 py-3 text-xs font-semibold text-black dark:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors duration-200 cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20"
+            >
+              {addressCopied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+              {addressCopied ? 'Copied!' : 'Copy Address'}
+            </button>
+            <button
+              type="button"
+              onClick={handleDisconnect}
+              className="flex flex-col items-center gap-1.5 rounded-2xl border border-neutral-100 dark:border-neutral-800/80 bg-neutral-50/50 dark:bg-neutral-800/40 px-4 py-3 text-xs font-semibold text-black dark:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors duration-200 cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20"
+            >
+              <LogOut className="w-4 h-4" />
+              Disconnect
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
