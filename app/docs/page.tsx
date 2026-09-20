@@ -31,11 +31,10 @@ export default function DocsPage() {
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
-                className={`text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
-                  activeSection === section.id
-                    ? 'bg-black text-white dark:bg-white dark:text-black font-bold shadow-xs'
-                    : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800'
-                }`}
+                className={`text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer ${activeSection === section.id
+                  ? 'bg-black text-white dark:bg-white dark:text-black font-bold shadow-xs'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800'
+                  }`}
               >
                 {section.label}
               </button>
@@ -58,14 +57,14 @@ export default function DocsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 bg-neutral-50/30 dark:bg-neutral-900/50">
                   <h3 className="text-sm font-bold text-black dark:text-white mb-2">Core Contract</h3>
-                  <p className="text-xs text-neutral-500">
-                    <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-[11px]">WindmillExchange.sol</code> — Handles
+                  <p className="text-xs text-neutral-600 dark:text-neutral-300">
+                    <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1.5 py-0.5 rounded text-[11px]">WindmillExchange.sol</code> — Handles
                     order creation, cancellation, matching, and settlement with ReentrancyGuard protection.
                   </p>
                 </div>
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 bg-neutral-50/30 dark:bg-neutral-900/50">
                   <h3 className="text-sm font-bold text-black dark:text-white mb-2">Keeper Network</h3>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-neutral-600 dark:text-neutral-300">
                     Node.js service using ethers.js that continuously scans for matchable order pairs and executes
                     settlement transactions to earn 0.1% fees.
                   </p>
@@ -74,8 +73,8 @@ export default function DocsPage() {
 
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 bg-neutral-50/30 dark:bg-neutral-900/50">
                 <h3 className="text-sm font-bold text-black dark:text-white mb-2">Architecture</h3>
-                <div className="font-mono text-[11px] text-neutral-600 whitespace-pre overflow-x-auto">
-{`src/
+                <div className="font-mono text-[11px] text-neutral-600 dark:text-neutral-300 whitespace-pre overflow-x-auto">
+                  {`src/
 ├── core/
 │   └── WindmillExchange.sol    # Main contract (order lifecycle + matching)
 ├── interfaces/
@@ -94,13 +93,12 @@ export default function DocsPage() {
               </div>
             </div>
           )}
-
           {activeSection === 'price-curves' && (
             <div data-reveal className="reveal-fade-up flex flex-col gap-6">
               <h2 className="text-2xl font-extrabold text-black dark:text-white">Price Curve Mechanics</h2>
               <p>
                 Each order is characterized by a starting price and a linear slope. Prices are represented in{' '}
-                <strong>RAY</strong> (1e27) units for high-precision arithmetic:
+                <strong className="text-black dark:text-white">RAY</strong> (1e27) units for high-precision arithmetic:
               </p>
               <div className="bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-100 dark:border-neutral-800 p-5 rounded-xl font-mono text-sm text-black dark:text-white">
                 price(t) = startPrice + slope × (t − createdAt)
@@ -108,14 +106,14 @@ export default function DocsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                   <h4 className="text-sm font-bold text-black dark:text-white mb-1">Buy Orders (Negative Slope)</h4>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-neutral-600 dark:text-neutral-300">
                     Buyer&apos;s willingness to pay <em>decreases</em> over time. The price slides downward along the curve
                     until it meets a compatible sell order or expires.
                   </p>
                 </div>
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                   <h4 className="text-sm font-bold text-black dark:text-white mb-1">Sell Orders (Positive Slope)</h4>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-neutral-600 dark:text-neutral-300">
                     Seller&apos;s asking price <em>increases</em> over time. This creates natural price convergence where
                     buy and sell curves eventually intersect.
                   </p>
@@ -123,15 +121,15 @@ export default function DocsPage() {
               </div>
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                 <h4 className="text-sm font-bold text-black dark:text-white mb-2">Price Bounds</h4>
-                <ul className="text-xs text-neutral-500 flex flex-col gap-1.5">
-                  <li>• <code className="bg-neutral-100 px-1 py-0.5 rounded">minPrice</code> — Floor price. The curve never goes below this value (0 = no floor).</li>
-                  <li>• <code className="bg-neutral-100 px-1 py-0.5 rounded">maxPrice</code> — Ceiling price. The curve never exceeds this value (0 = no ceiling).</li>
-                  <li>• <code className="bg-neutral-100 px-1 py-0.5 rounded">expiry</code> — Unix timestamp after which the order cannot be matched (0 = no expiry).</li>
+                <ul className="text-xs text-neutral-600 dark:text-neutral-300 flex flex-col gap-1.5">
+                  <li>• <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">minPrice</code> — Floor price. The curve never goes below this value (0 = no floor).</li>
+                  <li>• <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">maxPrice</code> — Ceiling price. The curve never exceeds this value (0 = no ceiling).</li>
+                  <li>• <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">expiry</code> — Unix timestamp after which the order cannot be matched (0 = no expiry).</li>
                 </ul>
               </div>
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                 <h4 className="text-sm font-bold text-black dark:text-white mb-2">Settlement Price</h4>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300">
                   When two orders match, the settlement price is computed as the midpoint of the buy and sell prices at the
                   current timestamp. The executed quantity is determined by the smaller of: (1) what the buyer can afford, and
                   (2) what the seller has remaining.
@@ -143,7 +141,7 @@ export default function DocsPage() {
           {activeSection === 'api' && (
             <div data-reveal className="reveal-fade-up flex flex-col gap-6">
               <h2 className="text-2xl font-extrabold text-black dark:text-white">API Reference</h2>
-              <p className="text-neutral-500">Complete public interface of the WindmillExchange smart contract.</p>
+              <p className="text-neutral-600 dark:text-neutral-300">Complete public interface of the WindmillExchange smart contract.</p>
 
               {/* createOrder */}
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
@@ -161,8 +159,8 @@ export default function DocsPage() {
   bool isBuy          // true = buy order, false = sell
 ) external payable returns (uint256 orderId)`}</pre>
                 </div>
-                <p className="text-xs text-neutral-500">
-                  Creates a new dynamic-priced order. The maker deposits <code>amountIn</code> tokens (or ETH for WETH pairs).
+                <p className="text-xs text-neutral-600 dark:text-neutral-300">
+                  Creates a new dynamic-priced order. The maker deposits <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">amountIn</code> tokens (or ETH for WETH pairs).
                   Returns the assigned order ID.
                 </p>
               </div>
@@ -173,7 +171,7 @@ export default function DocsPage() {
                 <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-3 font-mono text-[11px] text-black dark:text-white overflow-x-auto mb-3">
                   <pre className="whitespace-pre">{`function cancelOrder(uint256 orderId) external`}</pre>
                 </div>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300">
                   Cancels an active order. Only the maker can cancel. Refunds remaining deposited tokens to the maker.
                 </p>
               </div>
@@ -188,8 +186,8 @@ export default function DocsPage() {
   uint256 deadline      // Keeper deadline timestamp
 ) external`}</pre>
                 </div>
-                <p className="text-xs text-neutral-500">
-                  Settles a compatible buy-sell pair. Called by keepers. Awards 0.1% fee to <code>msg.sender</code>.
+                <p className="text-xs text-neutral-600 dark:text-neutral-300">
+                  Settles a compatible buy-sell pair. Called by keepers. Awards 0.1% fee to <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">msg.sender</code>.
                   Requires buy price ≥ sell price at the current timestamp.
                 </p>
               </div>
@@ -204,7 +202,7 @@ export default function DocsPage() {
   uint256 deadline
 ) external`}</pre>
                 </div>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300">
                   Batch matches one order against multiple counter-orders in a single transaction for gas efficiency.
                 </p>
               </div>
@@ -215,19 +213,19 @@ export default function DocsPage() {
                 <div className="flex flex-col gap-3 text-xs font-mono">
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">getOrder(uint256 orderId) → Order</code>
-                    <span className="text-neutral-400 font-sans">Returns the full order struct for a given ID.</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 font-sans">Returns the full order struct for a given ID.</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">getOrdersByPair(address tokenA, address tokenB, uint256 cursor, uint256 limit) → uint256[]</code>
-                    <span className="text-neutral-400 font-sans">Paginated list of order IDs for a token pair (max 500 per page).</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 font-sans">Paginated list of order IDs for a token pair (max 500 per page).</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">currentPrice(uint256 orderId, uint256 timestamp) → uint256</code>
-                    <span className="text-neutral-400 font-sans">Computes the order&apos;s price at a given timestamp using the price curve formula.</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 font-sans">Computes the order&apos;s price at a given timestamp using the price curve formula.</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">totalOrders() → uint256</code>
-                    <span className="text-neutral-400 font-sans">Total number of orders created (including inactive).</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 font-sans">Total number of orders created (including inactive).</span>
                   </div>
                 </div>
               </div>
@@ -301,11 +299,11 @@ forge script script/DeployWindmill.s.sol \\
 
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white mb-3">Post-Deployment</h3>
-                <ol className="flex flex-col gap-2 text-xs text-neutral-600 list-decimal pl-5">
+                <ol className="flex flex-col gap-2 text-xs text-neutral-600 dark:text-neutral-300 list-decimal pl-5">
                   <li>Record the deployed contract address from console output</li>
-                  <li>Set <code className="bg-neutral-100 px-1 py-0.5 rounded">NEXT_PUBLIC_CONTRACT_ADDRESS_*</code> in the WebUI .env</li>
-                  <li>Set <code className="bg-neutral-100 px-1 py-0.5 rounded">CONTRACT_ADDRESS</code> in the Keeper .env</li>
-                  <li>Optionally configure protocol fee via <code className="bg-neutral-100 px-1 py-0.5 rounded">setProtocolFee()</code></li>
+                  <li>Set <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">NEXT_PUBLIC_CONTRACT_ADDRESS_*</code> in the WebUI .env</li>
+                  <li>Set <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">CONTRACT_ADDRESS</code> in the Keeper .env</li>
+                  <li>Optionally configure protocol fee via <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">setProtocolFee()</code></li>
                 </ol>
               </div>
             </div>
@@ -321,15 +319,15 @@ forge script script/DeployWindmill.s.sol \\
 
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white mb-2">Strategy: Windmill</h3>
-                <p className="text-xs text-neutral-500 mb-3">
-                  The <code className="bg-neutral-100 px-1 py-0.5 rounded">windmill</code> strategy implements:
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mb-3">
+                  The <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">windmill</code> strategy implements:
                 </p>
-                <ol className="flex flex-col gap-2 text-xs text-neutral-600 list-decimal pl-5">
-                  <li>Event-based pair discovery from <code>OrderCreated</code> logs</li>
-                  <li>Paginated order fetching via <code>getOrdersByPair()</code></li>
-                  <li>On-chain price resolution via <code>currentPrice()</code></li>
+                <ol className="flex flex-col gap-2 text-xs text-neutral-600 dark:text-neutral-300 list-decimal pl-5">
+                  <li>Event-based pair discovery from <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">OrderCreated</code> logs</li>
+                  <li>Paginated order fetching via <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">getOrdersByPair()</code></li>
+                  <li>On-chain price resolution via <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">currentPrice()</code></li>
                   <li>Two-pointer sweep matching (O(N log N) sort + O(N+M) sweep)</li>
-                  <li>Atomic settlement via <code>matchOrders()</code></li>
+                  <li>Atomic settlement via <code className="bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 px-1 py-0.5 rounded">matchOrders()</code></li>
                 </ol>
               </div>
 
@@ -338,22 +336,22 @@ forge script script/DeployWindmill.s.sol \\
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="text-neutral-400 uppercase tracking-wider text-[10px] font-bold border-b border-neutral-100">
+                      <tr className="text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-[10px] font-bold border-b border-neutral-100 dark:border-neutral-800">
                         <th className="text-left p-2">Variable</th>
                         <th className="text-left p-2">Default</th>
                         <th className="text-left p-2">Description</th>
                       </tr>
                     </thead>
-                    <tbody className="text-neutral-600">
-                      <tr className="border-b border-neutral-50"><td className="p-2 font-mono">KEEPER_STRATEGY</td><td className="p-2">noop</td><td className="p-2">Strategy name (use &quot;windmill&quot;)</td></tr>
-                      <tr className="border-b border-neutral-50"><td className="p-2 font-mono">RPC_URL</td><td className="p-2">localhost:8545</td><td className="p-2">JSON-RPC endpoint</td></tr>
-                      <tr className="border-b border-neutral-50"><td className="p-2 font-mono">EXPECTED_CHAIN_ID</td><td className="p-2">—</td><td className="p-2">Safety check for chain ID</td></tr>
-                      <tr className="border-b border-neutral-50"><td className="p-2 font-mono">PRIVATE_KEY</td><td className="p-2">—</td><td className="p-2">Keeper wallet private key</td></tr>
-                      <tr className="border-b border-neutral-50"><td className="p-2 font-mono">CONTRACT_ADDRESS</td><td className="p-2">—</td><td className="p-2">WindmillExchange address</td></tr>
-                      <tr className="border-b border-neutral-50"><td className="p-2 font-mono">KEEPER_INTERVAL_MS</td><td className="p-2">15000</td><td className="p-2">Sweep cycle interval (ms)</td></tr>
-                      <tr className="border-b border-neutral-50"><td className="p-2 font-mono">MAX_ACTIONS_PER_CYCLE</td><td className="p-2">25</td><td className="p-2">Max matches per cycle</td></tr>
-                      <tr className="border-b border-neutral-50"><td className="p-2 font-mono">DRY_RUN</td><td className="p-2">false</td><td className="p-2">Log-only mode (no txs)</td></tr>
-                      <tr><td className="p-2 font-mono">DEPLOY_BLOCK</td><td className="p-2">0</td><td className="p-2">Block to start scanning events from</td></tr>
+                    <tbody className="text-neutral-700 dark:text-neutral-300">
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800/60"><td className="p-2 font-mono text-black dark:text-white">KEEPER_STRATEGY</td><td className="p-2">noop</td><td className="p-2">Strategy name (use &quot;windmill&quot;)</td></tr>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800/60"><td className="p-2 font-mono text-black dark:text-white">RPC_URL</td><td className="p-2">localhost:8545</td><td className="p-2">JSON-RPC endpoint</td></tr>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800/60"><td className="p-2 font-mono text-black dark:text-white">EXPECTED_CHAIN_ID</td><td className="p-2">—</td><td className="p-2">Safety check for chain ID</td></tr>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800/60"><td className="p-2 font-mono text-black dark:text-white">PRIVATE_KEY</td><td className="p-2">—</td><td className="p-2">Keeper wallet private key</td></tr>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800/60"><td className="p-2 font-mono text-black dark:text-white">CONTRACT_ADDRESS</td><td className="p-2">—</td><td className="p-2">WindmillExchange address</td></tr>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800/60"><td className="p-2 font-mono text-black dark:text-white">KEEPER_INTERVAL_MS</td><td className="p-2">15000</td><td className="p-2">Sweep cycle interval (ms)</td></tr>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800/60"><td className="p-2 font-mono text-black dark:text-white">MAX_ACTIONS_PER_CYCLE</td><td className="p-2">25</td><td className="p-2">Max matches per cycle</td></tr>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800/60"><td className="p-2 font-mono text-black dark:text-white">DRY_RUN</td><td className="p-2">false</td><td className="p-2">Log-only mode (no txs)</td></tr>
+                      <tr><td className="p-2 font-mono text-black dark:text-white">DEPLOY_BLOCK</td><td className="p-2">0</td><td className="p-2">Block to start scanning events from</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -371,7 +369,7 @@ forge script script/DeployWindmill.s.sol \\
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl overflow-hidden">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-neutral-50 dark:bg-neutral-800/80 text-neutral-400 uppercase tracking-wider text-[10px] font-bold">
+                    <tr className="bg-neutral-50 dark:bg-neutral-800/80 text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-[10px] font-bold">
                       <th className="text-left p-3">Network</th>
                       <th className="text-left p-3">Chain ID</th>
                       <th className="text-left p-3">Type</th>
@@ -383,21 +381,21 @@ forge script script/DeployWindmill.s.sol \\
                     {Object.values(SUPPORTED_CHAINS).map((chain) => (
                       <tr key={chain.chainId} className="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
                         <td className="p-3 font-semibold text-black dark:text-white">{chain.name}</td>
-                        <td className="p-3 font-mono text-neutral-500">{chain.chainId}</td>
-                        <td className="p-3 text-neutral-500">{chain.chainId === 11155111 || chain.chainId === 63 ? 'Testnet' : 'Mainnet'}</td>
-                        <td className="p-3 text-neutral-400 font-mono text-[10px] max-w-[200px] truncate">{chain.rpcUrl}</td>
+                        <td className="p-3 font-mono text-neutral-600 dark:text-neutral-300">{chain.chainId}</td>
+                        <td className="p-3 text-neutral-600 dark:text-neutral-300">{chain.chainId === 11155111 || chain.chainId === 63 ? 'Testnet' : 'Mainnet'}</td>
+                        <td className="p-3 text-neutral-400 dark:text-neutral-500 font-mono text-[10px] max-w-[200px] truncate">{chain.rpcUrl}</td>
                         <td className="p-3">
                           {chain.contractAddress ? (
                             <a
                               href={`${chain.explorerUrl}/address/${chain.contractAddress}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-mono text-[10px] text-blue-600 hover:underline"
+                              className="font-mono text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
                             >
                               {chain.contractAddress.slice(0, 8)}...
                             </a>
                           ) : (
-                            <span className="text-neutral-400 text-[10px]">Not deployed</span>
+                            <span className="text-neutral-400 dark:text-neutral-500 text-[10px]">Not deployed</span>
                           )}
                         </td>
                       </tr>
