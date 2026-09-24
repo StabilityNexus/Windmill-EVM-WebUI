@@ -432,6 +432,21 @@ body {
   }
 }
 
+@keyframes curve-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.02);
+  }
+}
+
+.animate-curve-pulse {
+  animation: curve-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal-3d,
   .reveal-3d-flip,
@@ -448,7 +463,8 @@ body {
   .text-reveal-4,
   .animate-float,
   .animate-float-delayed,
-  .animate-pulse-slow {
+  .animate-pulse-slow,
+  .animate-curve-pulse {
     animation: none;
   }
 }

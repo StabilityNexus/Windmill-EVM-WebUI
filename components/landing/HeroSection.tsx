@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import StatsPanel from '@/components/landing/StatsPanel';
+import InteractiveDotGrid from '@/components/ui/InteractiveDotGrid';
 import { Zap } from 'lucide-react';
 
 /* ── Framer Motion Variants ─────────────────────────────────────── */
@@ -125,8 +126,11 @@ export default function HeroSection() {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background text-foreground pt-32 pb-16 bg-light-mesh transition-colors duration-300"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background text-foreground pt-32 pb-16 transition-colors duration-300"
     >
+      {/* Interactive Dot Grid Background with spherical cursor deflection */}
+      <InteractiveDotGrid dotSpacing={32} baseDotRadius={1.25} />
+
       {/* Ambient soft glow spots */}
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 w-[60vw] h-[60vw] glow-spot-light-1 rounded-full opacity-[0.4] blur-3xl pointer-events-none animate-pulse-slow" />
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 w-[50vw] h-[50vw] glow-spot-light-2 rounded-full opacity-[0.3] blur-3xl pointer-events-none animate-pulse-slow" />

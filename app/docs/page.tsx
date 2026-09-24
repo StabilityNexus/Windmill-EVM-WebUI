@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import WalletModal from '@/components/wallet/WalletModal';
 import { SUPPORTED_CHAINS } from '@/lib/contractConfig';
-import { useScrollRevealChildren } from '@/hooks/useScrollReveal';
+import CodeBlock from '@/components/ui/CodeBlock';
 
 const DOCS_SECTIONS = [
   { id: 'overview', label: 'Overview' },
@@ -16,7 +16,35 @@ const DOCS_SECTIONS = [
 
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState('overview');
-  const containerRef = useScrollRevealChildren<HTMLDivElement>({ threshold: 0.05 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Re-observe [data-reveal] children every time the active section changes.
+  // Without this, elements rendered after the initial mount never get the
+  // IntersectionObserver attached and stay stuck at opacity-0.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Small timeout lets React finish rendering the new section's DOM nodes
+    const timer = setTimeout(() => {
+      const children = container.querySelectorAll<HTMLElement>('[data-reveal]');
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('revealed');
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.05, rootMargin: '0px 0px -40px 0px' },
+      );
+      children.forEach((child) => observer.observe(child));
+      return () => observer.disconnect();
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [activeSection]);
 
   return (
     <main className="w-full min-h-screen bg-background text-foreground pt-24 transition-colors duration-300">
@@ -146,8 +174,9 @@ export default function DocsPage() {
               {/* createOrder */}
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white font-mono mb-2">createOrder()</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-3 font-mono text-[11px] text-black dark:text-white overflow-x-auto mb-3">
-                  <pre className="whitespace-pre">{`function createOrder(
+                <CodeBlock
+                  className="mb-3 text-[11px]"
+                  code={`function createOrder(
   address tokenIn,    // Token deposited by maker
   address tokenOut,   // Token desired by maker
   uint256 amountIn,   // Amount of tokenIn to deposit
@@ -179,8 +208,9 @@ export default function DocsPage() {
               {/* matchOrders */}
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white font-mono mb-2">matchOrders()</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-3 font-mono text-[11px] text-black dark:text-white overflow-x-auto mb-3">
-                  <pre className="whitespace-pre">{`function matchOrders(
+                <CodeBlock
+                  className="mb-3 text-[11px]"
+                  code={`function matchOrders(
   uint256 buyOrderId,
   uint256 sellOrderId,
   uint256 deadline      // Keeper deadline timestamp
@@ -195,8 +225,9 @@ export default function DocsPage() {
               {/* matchOrdersBatch */}
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white font-mono mb-2">matchOrdersBatch()</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-3 font-mono text-[11px] text-black dark:text-white overflow-x-auto mb-3">
-                  <pre className="whitespace-pre">{`function matchOrdersBatch(
+                <CodeBlock
+                  className="mb-3 text-[11px]"
+                  code={`function matchOrdersBatch(
   uint256 orderId,
   uint256[] calldata counterOrderIds,
   uint256 deadline
@@ -236,65 +267,70 @@ export default function DocsPage() {
             <div data-reveal className="reveal-fade-up flex flex-col gap-6">
               <h2 className="text-2xl font-extrabold text-black dark:text-white">Deployment Guide</h2>
 
-              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-black dark:text-white mb-3">Prerequisites</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-4 font-mono text-xs text-black dark:text-white overflow-x-auto">
-                  <pre className="whitespace-pre">{`# Install Foundry
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-
-# Verify
-forge --version
-cast --version
-anvil --version`}</pre>
-                </div>
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 flex flex-col gap-4">
+                <h3 className="text-sm font-bold text-black dark:text-white">Prerequisites</h3>
+                <CodeBlock
+                  label="1. Install Foundry toolchain"
+                  platforms={{
+                    macos: `curl -L https://foundry.paradigm.xyz | bash\nfoundryup`,
+                    linux: `curl -L https://foundry.paradigm.xyz | bash\nfoundryup`,
+                    windows: `irm https://foundry.paradigm.xyz/win | iex\nfoundryup`,
+                  }}
+                />
+                <CodeBlock
+                  label="2. Verify installation"
+                  platforms={{
+                    macos: `forge --version && cast --version && anvil --version`,
+                    linux: `forge --version && cast --version && anvil --version`,
+                    windows: `forge --version; cast --version; anvil --version`,
+                  }}
+                />
               </div>
 
-              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-black dark:text-white mb-3">Environment Setup</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-4 font-mono text-xs text-black dark:text-white overflow-x-auto">
-                  <pre className="whitespace-pre">{`cp .env.example .env
-
-# Edit .env:
-PRIVATE_KEY=0x...          # Deployer wallet private key
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 flex flex-col gap-4">
+                <h3 className="text-sm font-bold text-black dark:text-white">Environment Setup</h3>
+                <CodeBlock
+                  label="Initialize environment file"
+                  platforms={{
+                    macos: `cp .env.example .env`,
+                    linux: `cp .env.example .env`,
+                    windows: `Copy-Item .env.example .env`,
+                  }}
+                />
+                <CodeBlock
+                  label="Required environment variables"
+                  code={`PRIVATE_KEY=0x...          # Deployer wallet private key
 ETHERSCAN_API_KEY=...      # For contract verification
-WETH_ADDRESS=0xC02a...     # Chain-specific WETH address`}</pre>
-                </div>
+WETH_ADDRESS=0xC02a...     # Chain-specific WETH address`}
+                />
               </div>
 
-              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-black dark:text-white mb-3">Deploy to Testnet</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-4 font-mono text-xs text-black dark:text-white overflow-x-auto">
-                  <pre className="whitespace-pre">{`# Deploy to Sepolia
-forge script script/DeployWindmill.s.sol \\
-  --rpc-url sepolia \\
-  --broadcast \\
-  --verify \\
-  -vvvv
-
-# Deploy to Mordor (ETC testnet)
-forge script script/DeployWindmill.s.sol \\
-  --rpc-url mordor \\
-  --broadcast \\
-  -vvvv`}</pre>
-                </div>
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 flex flex-col gap-4">
+                <h3 className="text-sm font-bold text-black dark:text-white">Deploy to Testnet</h3>
+                <CodeBlock
+                  label="Sepolia Testnet"
+                  code={`forge script script/DeployWindmill.s.sol --rpc-url sepolia --broadcast --verify -vvvv`}
+                />
+                <CodeBlock
+                  label="Mordor (ETC Testnet)"
+                  code={`forge script script/DeployWindmill.s.sol --rpc-url mordor --broadcast -vvvv`}
+                />
               </div>
 
-              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-black dark:text-white mb-3">Deploy to Mainnet</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-4 font-mono text-xs text-black dark:text-white overflow-x-auto">
-                  <pre className="whitespace-pre">{`# Ethereum Mainnet
-forge script script/DeployWindmill.s.sol \\
-  --rpc-url ethereum --broadcast --verify -vvvv
-
-# Base
-forge script script/DeployWindmill.s.sol \\
-  --rpc-url base --broadcast --verify -vvvv
-
-# Polygon
-forge script script/DeployWindmill.s.sol \\
-  --rpc-url polygon --broadcast --verify -vvvv`}</pre>
-                </div>
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 flex flex-col gap-4">
+                <h3 className="text-sm font-bold text-black dark:text-white">Deploy to Mainnet</h3>
+                <CodeBlock
+                  label="Ethereum Mainnet"
+                  code={`forge script script/DeployWindmill.s.sol --rpc-url ethereum --broadcast --verify -vvvv`}
+                />
+                <CodeBlock
+                  label="Base Mainnet"
+                  code={`forge script script/DeployWindmill.s.sol --rpc-url base --broadcast --verify -vvvv`}
+                />
+                <CodeBlock
+                  label="Polygon Mainnet"
+                  code={`forge script script/DeployWindmill.s.sol --rpc-url polygon --broadcast --verify -vvvv`}
+                />
               </div>
 
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">

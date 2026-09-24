@@ -8,14 +8,16 @@ export default function CTASection() {
   return (
     <section
       id="cta"
-      ref={containerRef}
       className="bg-white dark:bg-[#0a0a0a] section-padding border-t border-black/5 dark:border-white/10 relative overflow-hidden transition-colors duration-300"
     >
       {/* Background Decorators */}
       <div className="absolute inset-0 hero-grid-pattern opacity-[0.2] dark:opacity-[0.15] pointer-events-none" />
 
       <div className="mx-auto max-w-4xl px-6 md:px-8 relative z-10">
-        <div className="reveal-scale relative rounded-3xl border border-black/10 dark:border-white/15 bg-black dark:bg-[#111111] px-8 py-14 md:py-20 text-center flex flex-col items-center justify-center overflow-hidden shadow-2xl">
+        <div
+          ref={containerRef}
+          className="reveal-scale relative rounded-3xl border border-black/10 dark:border-white/15 bg-black dark:bg-[#111111] px-8 py-14 md:py-20 text-center flex flex-col items-center justify-center overflow-hidden shadow-2xl"
+        >
           {/* Radial ambient background light */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.1),transparent_75%)] pointer-events-none" />
 

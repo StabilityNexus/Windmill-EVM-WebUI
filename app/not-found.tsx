@@ -5,9 +5,9 @@ export default function NotFound() {
     <main className="w-full min-h-screen bg-background text-foreground flex flex-col items-center justify-center pt-24 transition-colors duration-300">
       <div className="text-center px-6 py-20 flex flex-col items-center gap-4">
         <span className="text-6xl font-mono tracking-widest text-neutral-200 dark:text-neutral-800">404</span>
-        <h1 className="text-xl font-bold tracking-tight text-black dark:text-white">Page Temporarily Offline</h1>
+        <h1 className="text-xl font-bold tracking-tight text-black dark:text-white">Page Not Found</h1>
         <p className="text-neutral-500 dark:text-neutral-400 text-xs max-w-sm leading-relaxed">
-          This section is currently undergoing database updates or protocol migration. Please check back later.
+          The page you are looking for does not exist or has been moved. Please check the URL or return home.
         </p>
         <Link
           href="/"

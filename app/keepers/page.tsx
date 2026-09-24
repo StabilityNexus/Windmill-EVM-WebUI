@@ -5,6 +5,7 @@ import WalletModal from '@/components/wallet/WalletModal';
 import { useScrollRevealChildren } from '@/hooks/useScrollReveal';
 import { useContract } from '@/hooks/useContract';
 import { Monitor, Activity, Zap, CheckCircle2, Percent, Fuel, Search, RefreshCw, Play, Square, Terminal, Loader2 } from 'lucide-react';
+import CodeBlock from '@/components/ui/CodeBlock';
 
 // ── Keeper Bot Panel (local process control) ────────────────────────────
 function KeeperBotPanel() {
@@ -475,13 +476,15 @@ export default function KeepersPage() {
                   <div className="h-8 w-8 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-bold shrink-0">
                     1
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 flex flex-col gap-2">
                     <h4 className="text-sm font-bold text-black dark:text-white">Clone & Install</h4>
-                    <div className="bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-100 dark:border-neutral-700 rounded-xl p-4 font-mono text-xs text-black dark:text-white mt-2 overflow-x-auto">
-                      <pre className="whitespace-pre">{`git clone https://github.com/StabilityNexus/Windmill-EVM-Keeper.git
-cd Windmill-EVM-Keeper
-npm ci`}</pre>
-                    </div>
+                    <CodeBlock
+                      platforms={{
+                        macos: `git clone https://github.com/StabilityNexus/Windmill-EVM-Keeper.git && cd Windmill-EVM-Keeper && npm ci`,
+                        linux: `git clone https://github.com/StabilityNexus/Windmill-EVM-Keeper.git && cd Windmill-EVM-Keeper && npm ci`,
+                        windows: `git clone https://github.com/StabilityNexus/Windmill-EVM-Keeper.git; cd Windmill-EVM-Keeper; npm ci`,
+                      }}
+                    />
                   </div>
                 </div>
 
@@ -490,20 +493,26 @@ npm ci`}</pre>
                   <div className="h-8 w-8 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-bold shrink-0">
                     2
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 flex flex-col gap-3">
                     <h4 className="text-sm font-bold text-black dark:text-white">Configure Environment</h4>
-                    <div className="bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-100 dark:border-neutral-700 rounded-xl p-4 font-mono text-xs text-black dark:text-white mt-2 overflow-x-auto">
-                      <pre className="whitespace-pre">{`cp .env.example .env
-
-# Edit .env:
-KEEPER_STRATEGY=windmill
+                    <CodeBlock
+                      label="Copy environment template"
+                      platforms={{
+                        macos: `cp .env.example .env`,
+                        linux: `cp .env.example .env`,
+                        windows: `Copy-Item .env.example .env`,
+                      }}
+                    />
+                    <CodeBlock
+                      label="Sample .env configuration"
+                      code={`KEEPER_STRATEGY=windmill
 RPC_URL=https://sepolia.base.org
 EXPECTED_CHAIN_ID=84532
 PRIVATE_KEY=<your-keeper-wallet-private-key>
 CONTRACT_ADDRESS=<deployed-windmill-exchange-address>
 KEEPER_INTERVAL_MS=15000
-DRY_RUN=false`}</pre>
-                    </div>
+DRY_RUN=false`}
+                    />
                   </div>
                 </div>
 
@@ -512,18 +521,20 @@ DRY_RUN=false`}</pre>
                   <div className="h-8 w-8 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-bold shrink-0">
                     3
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 flex flex-col gap-3">
                     <h4 className="text-sm font-bold text-black dark:text-white">Run the Keeper</h4>
-                    <div className="bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-100 dark:border-neutral-700 rounded-xl p-4 font-mono text-xs text-black dark:text-white mt-2 overflow-x-auto">
-                      <pre className="whitespace-pre">{`# Test with dry run first (no transactions)
-npm run start:dry-run
-
-# Single cycle test
-npm run start:once
-
-# Production continuous loop
-npm run start`}</pre>
-                    </div>
+                    <CodeBlock
+                      label="1. Dry run test (simulation only, no transactions)"
+                      code={`npm run start:dry-run`}
+                    />
+                    <CodeBlock
+                      label="2. Single cycle test"
+                      code={`npm run start:once`}
+                    />
+                    <CodeBlock
+                      label="3. Production continuous daemon"
+                      code={`npm run start`}
+                    />
                   </div>
                 </div>
               </div>

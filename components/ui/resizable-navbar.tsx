@@ -76,10 +76,10 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
       }}
       className={cn(
-        'relative z-[60] mx-auto hidden w-full flex-row items-center justify-between rounded-full px-6 py-2.5 xl:flex',
+        'relative z-[60] mx-auto hidden w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-5 rounded-full px-8 py-2 xl:grid',
         visible
-          ? 'w-[85%] max-w-6xl glass-pill shadow-lg translate-y-4'
-          : 'w-full max-w-6xl bg-transparent border-transparent translate-y-0',
+          ? 'w-[92%] max-w-7xl glass-pill shadow-lg translate-y-4'
+          : 'w-full max-w-7xl bg-transparent border-transparent translate-y-0',
         className
       )}
     >
@@ -95,7 +95,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
     <div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        'hidden min-w-0 shrink flex-row items-center justify-center space-x-0.5 xl:space-x-1 text-[11px] xl:text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition duration-200 xl:flex',
+        'hidden w-fit min-w-0 flex-none flex-row items-center justify-center gap-1 xl:gap-3 text-xs xl:text-sm font-semibold text-neutral-700 dark:text-neutral-300 transition duration-200 xl:flex',
         className
       )}
     >
@@ -105,7 +105,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
           onClick={onItemClick}
           aria-current={item.active ? 'page' : undefined}
           className={cn(
-            'relative min-w-0 shrink rounded-full px-2 py-1.5 transition-colors duration-200 xl:px-3 xl:py-2 select-none',
+            'relative min-w-max shrink-0 rounded-full px-1 py-1.5 transition-colors duration-200 xl:px-2 xl:py-2 select-none',
             item.active
               ? 'bg-neutral-100/80 text-black dark:bg-white/10 dark:text-white font-bold'
               : 'text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white'
@@ -116,7 +116,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
           {hovered === idx && (
             <div className="absolute inset-0 h-full w-full rounded-full bg-neutral-100/70 dark:bg-white/10 z-0 animate-fade-in pointer-events-none" />
           )}
-          <span className="relative z-10 uppercase tracking-wider text-[10px] font-bold whitespace-nowrap">{item.name}</span>
+          <span className="relative z-10 uppercase tracking-wider text-xs xl:text-sm font-bold whitespace-nowrap">{item.name}</span>
         </Link>
       ))}
     </div>
@@ -130,9 +130,9 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
       }}
       className={cn(
-        'relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-4 py-3.5 xl:hidden rounded-full',
+        'relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-6 py-3 xl:hidden rounded-full',
         visible 
-          ? 'w-[85%] glass-pill shadow-lg translate-y-4' 
+          ? 'w-[92%] glass-pill shadow-lg translate-y-4'
           : 'w-full bg-transparent border-transparent translate-y-0',
         className
       )}
