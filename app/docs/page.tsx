@@ -86,14 +86,14 @@ export default function DocsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 bg-neutral-50/30 dark:bg-neutral-900/50">
                   <h3 className="text-sm font-bold text-black dark:text-white mb-2">Core Contract</h3>
-                  <p className="text-xs text-neutral-500">
-                    <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-[11px]">WindmillExchange.sol</code> — Handles
+                  <p className="text-xs text-muted-foreground">
+                    <code className="bg-neutral-100 text-black px-1.5 py-0.5 rounded text-[11px]">WindmillExchange.sol</code> — Handles
                     order creation, cancellation, matching, and settlement with ReentrancyGuard protection.
                   </p>
                 </div>
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 bg-neutral-50/30 dark:bg-neutral-900/50">
                   <h3 className="text-sm font-bold text-black dark:text-white mb-2">Keeper Network</h3>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-muted-foreground">
                     Node.js service using ethers.js that continuously scans for matchable order pairs and executes
                     settlement transactions to earn 0.1% fees.
                   </p>
@@ -115,14 +115,14 @@ export default function DocsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                   <h4 className="text-sm font-bold text-black dark:text-white mb-1">Buy Orders (Negative Slope)</h4>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-muted-foreground">
                     Buyer&apos;s willingness to pay <em>decreases</em> over time. The price slides downward along the curve
                     until it meets a compatible sell order or expires.
                   </p>
                 </div>
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                   <h4 className="text-sm font-bold text-black dark:text-white mb-1">Sell Orders (Positive Slope)</h4>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-muted-foreground">
                     Seller&apos;s asking price <em>increases</em> over time. This creates natural price convergence where
                     buy and sell curves eventually intersect.
                   </p>
@@ -130,15 +130,15 @@ export default function DocsPage() {
               </div>
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                 <h4 className="text-sm font-bold text-black dark:text-white mb-2">Price Bounds</h4>
-                <ul className="text-xs text-neutral-500 flex flex-col gap-1.5">
-                  <li>• <code className="bg-neutral-100 px-1 py-0.5 rounded">minPrice</code> — Floor price. The curve never goes below this value (0 = no floor).</li>
-                  <li>• <code className="bg-neutral-100 px-1 py-0.5 rounded">maxPrice</code> — Ceiling price. The curve never exceeds this value (0 = no ceiling).</li>
-                  <li>• <code className="bg-neutral-100 px-1 py-0.5 rounded">expiry</code> — Unix timestamp after which the order cannot be matched (0 = no expiry).</li>
+                <ul className="text-xs text-muted-foreground flex flex-col gap-1.5">
+                  <li>• <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">minPrice</code> — Floor price. The curve never goes below this value (0 = no floor).</li>
+                  <li>• <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">maxPrice</code> — Ceiling price. The curve never exceeds this value (0 = no ceiling).</li>
+                  <li>• <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">expiry</code> — Unix timestamp after which the order cannot be matched (0 = no expiry).</li>
                 </ul>
               </div>
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                 <h4 className="text-sm font-bold text-black dark:text-white mb-2">Settlement Price</h4>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-muted-foreground">
                   When two orders match, the settlement price is computed as the midpoint of the buy and sell prices at the
                   current timestamp. The executed quantity is determined by the smaller of: (1) what the buyer can afford, and
                   (2) what the seller has remaining.
@@ -150,7 +150,7 @@ export default function DocsPage() {
           {activeSection === 'api' && (
             <div data-reveal className="reveal-fade-up flex flex-col gap-6">
               <h2 className="text-2xl font-extrabold text-black dark:text-white">API Reference</h2>
-              <p className="text-neutral-500">Complete public interface of the WindmillExchange smart contract.</p>
+              <p className="text-muted-foreground">Complete public interface of the WindmillExchange smart contract.</p>
 
               {/* createOrder */}
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
@@ -169,7 +169,7 @@ export default function DocsPage() {
   bool isBuy          // true = buy order, false = sell
 ) external payable returns (uint256 orderId)`}
                 />
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-muted-foreground">
                   Creates a new dynamic-priced order. The maker deposits <code>amountIn</code> tokens (or ETH for WETH pairs).
                   Returns the assigned order ID.
                 </p>
@@ -182,7 +182,7 @@ export default function DocsPage() {
                   className="mb-3 text-[11px]"
                   code={`function cancelOrder(uint256 orderId) external`}
                 />
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-muted-foreground">
                   Cancels an active order. Only the maker can cancel. Refunds remaining deposited tokens to the maker.
                 </p>
               </div>
@@ -198,7 +198,7 @@ export default function DocsPage() {
   uint256 deadline      // Keeper deadline timestamp
 ) external`}
                 />
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-muted-foreground">
                   Settles a compatible buy-sell pair. Called by keepers. Awards 0.1% fee to <code>msg.sender</code>.
                   Requires buy price ≥ sell price at the current timestamp.
                 </p>
@@ -215,7 +215,7 @@ export default function DocsPage() {
   uint256 deadline
 ) external`}
                 />
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-muted-foreground">
                   Batch matches one order against multiple counter-orders in a single transaction for gas efficiency.
                 </p>
               </div>
@@ -226,19 +226,19 @@ export default function DocsPage() {
                 <div className="flex flex-col gap-3 text-xs font-mono">
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">getOrder(uint256 orderId) → Order</code>
-                    <span className="text-neutral-400 font-sans">Returns the full order struct for a given ID.</span>
+                    <span className="text-muted-foreground font-sans">Returns the full order struct for a given ID.</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">getOrdersByPair(address tokenA, address tokenB, uint256 cursor, uint256 limit) → uint256[]</code>
-                    <span className="text-neutral-400 font-sans">Paginated list of order IDs for a token pair (max 500 per page).</span>
+                    <span className="text-muted-foreground font-sans">Paginated list of order IDs for a token pair (max 500 per page).</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">currentPrice(uint256 orderId, uint256 timestamp) → uint256</code>
-                    <span className="text-neutral-400 font-sans">Computes the order&apos;s price at a given timestamp using the price curve formula.</span>
+                    <span className="text-muted-foreground font-sans">Computes the order&apos;s price at a given timestamp using the price curve formula.</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">totalOrders() → uint256</code>
-                    <span className="text-neutral-400 font-sans">Total number of orders created (including inactive).</span>
+                    <span className="text-muted-foreground font-sans">Total number of orders created (including inactive).</span>
                   </div>
                 </div>
               </div>
@@ -317,11 +317,11 @@ WETH_ADDRESS=0xC02a...     # Chain-specific WETH address`}
 
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white mb-3">Post-Deployment</h3>
-                <ol className="flex flex-col gap-2 text-xs text-neutral-600 list-decimal pl-5">
+                <ol className="flex flex-col gap-2 text-xs text-muted-foreground list-decimal pl-5">
                   <li>Record the deployed contract address from console output</li>
-                  <li>Set <code className="bg-neutral-100 px-1 py-0.5 rounded">NEXT_PUBLIC_CONTRACT_ADDRESS_*</code> in the WebUI .env</li>
-                  <li>Set <code className="bg-neutral-100 px-1 py-0.5 rounded">CONTRACT_ADDRESS</code> in the Keeper .env</li>
-                  <li>Optionally configure protocol fee via <code className="bg-neutral-100 px-1 py-0.5 rounded">setProtocolFee()</code></li>
+                  <li>Set <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">NEXT_PUBLIC_CONTRACT_ADDRESS_*</code> in the WebUI .env</li>
+                  <li>Set <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">CONTRACT_ADDRESS</code> in the Keeper .env</li>
+                  <li>Optionally configure protocol fee via <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">setProtocolFee()</code></li>
                 </ol>
               </div>
             </div>
@@ -337,10 +337,10 @@ WETH_ADDRESS=0xC02a...     # Chain-specific WETH address`}
 
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white mb-2">Strategy: Windmill</h3>
-                <p className="text-xs text-neutral-500 mb-3">
-                  The <code className="bg-neutral-100 px-1 py-0.5 rounded">windmill</code> strategy implements:
+                <p className="text-xs text-muted-foreground mb-3">
+                  The <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">windmill</code> strategy implements:
                 </p>
-                <ol className="flex flex-col gap-2 text-xs text-neutral-600 list-decimal pl-5">
+                <ol className="flex flex-col gap-2 text-xs text-muted-foreground list-decimal pl-5">
                   <li>Event-based pair discovery from <code>OrderCreated</code> logs</li>
                   <li>Paginated order fetching via <code>getOrdersByPair()</code></li>
                   <li>On-chain price resolution via <code>currentPrice()</code></li>
@@ -360,7 +360,7 @@ WETH_ADDRESS=0xC02a...     # Chain-specific WETH address`}
                         <th className="text-left p-2">Description</th>
                       </tr>
                     </thead>
-                    <tbody className="text-neutral-600">
+                    <tbody className="text-muted-foreground">
                       <tr className="border-b border-neutral-50"><td className="p-2 font-mono">KEEPER_STRATEGY</td><td className="p-2">noop</td><td className="p-2">Strategy name (use &quot;windmill&quot;)</td></tr>
                       <tr className="border-b border-neutral-50"><td className="p-2 font-mono">RPC_URL</td><td className="p-2">localhost:8545</td><td className="p-2">JSON-RPC endpoint</td></tr>
                       <tr className="border-b border-neutral-50"><td className="p-2 font-mono">EXPECTED_CHAIN_ID</td><td className="p-2">—</td><td className="p-2">Safety check for chain ID</td></tr>
@@ -399,9 +399,9 @@ WETH_ADDRESS=0xC02a...     # Chain-specific WETH address`}
                     {Object.values(SUPPORTED_CHAINS).map((chain) => (
                       <tr key={chain.chainId} className="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
                         <td className="p-3 font-semibold text-black dark:text-white">{chain.name}</td>
-                        <td className="p-3 font-mono text-neutral-500">{chain.chainId}</td>
-                        <td className="p-3 text-neutral-500">{chain.chainId === 11155111 || chain.chainId === 63 ? 'Testnet' : 'Mainnet'}</td>
-                        <td className="p-3 text-neutral-400 font-mono text-[10px] max-w-[200px] truncate">{chain.rpcUrl}</td>
+                        <td className="p-3 font-mono text-muted-foreground">{chain.chainId}</td>
+                        <td className="p-3 text-muted-foreground">{chain.chainId === 11155111 || chain.chainId === 63 ? 'Testnet' : 'Mainnet'}</td>
+                        <td className="p-3 text-muted-foreground font-mono text-[10px] max-w-[200px] truncate">{chain.rpcUrl}</td>
                         <td className="p-3">
                           {chain.contractAddress ? (
                             <a
@@ -413,7 +413,7 @@ WETH_ADDRESS=0xC02a...     # Chain-specific WETH address`}
                               {chain.contractAddress.slice(0, 8)}...
                             </a>
                           ) : (
-                            <span className="text-neutral-400 text-[10px]">Not deployed</span>
+                            <span className="text-muted-foreground text-[10px]">Not deployed</span>
                           )}
                         </td>
                       </tr>
