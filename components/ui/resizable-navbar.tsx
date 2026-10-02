@@ -156,7 +156,7 @@ export const MobileNavMenu = ({ children, className, isOpen }: MobileNavMenuProp
   return (
     <div
       className={cn(
-        'absolute inset-x-0 top-16 z-50 flex w-full flex-col items-start justify-start gap-4 rounded-3xl bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 p-6 shadow-xl animate-dropdown-enter text-foreground',
+        'absolute inset-x-0 top-16 z-50 flex max-h-[calc(100vh-5rem)] w-full flex-col items-start justify-start gap-4 overflow-y-auto rounded-3xl bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 p-6 shadow-xl animate-dropdown-enter text-foreground',
         className
       )}
     >
