@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
@@ -105,20 +105,29 @@ export async function POST(req: NextRequest) {
 
     const ratelimit = new Ratelimit({
       redis,
-      // Sliding window: 10 submissions per email per 24 hours.
+      // Sliding window: approximately 10 submissions per email per 24 hours.
       limiter: Ratelimit.slidingWindow(10, '24 h'),
       // Prefix isolates our keys from any other Upstash usage.
       prefix: 'windmill:support',
     });
 
-    const { success, remaining } = await ratelimit.limit(normalizedEmail);
+    const result = await ratelimit.limit(normalizedEmail);
+    const { success, remaining } = result;
+    const reason = (result as { reason?: string }).reason;
+
+    if (reason === 'timeout') {
+      return NextResponse.json(
+        { ok: false, error: 'Ticket submission is temporarily unavailable. Please try again later.' },
+        { status: 503 },
+      );
+    }
 
     if (!success) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            'You have reached the maximum of 10 support tickets per 24 hours. Please try again later.',
+            'You have reached the maximum limit of approximately 10 support tickets per 24 hours. Please try again later.',
           remaining: 0,
         },
         { status: 429 },

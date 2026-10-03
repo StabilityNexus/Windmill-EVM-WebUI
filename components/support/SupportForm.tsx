@@ -57,10 +57,21 @@ export default function SupportForm() {
         body: JSON.stringify({ email: email.trim(), subject: subject.trim(), details: details.trim() }),
       });
 
-      const data = (await res.json()) as { ok: boolean; error?: string };
-
       if (res.status === 429) {
         setStatus('rate-limited');
+        return;
+      }
+
+      let data: { ok?: boolean; error?: string } = {};
+      try {
+        data = (await res.json()) as { ok?: boolean; error?: string };
+      } catch {
+        setErrorMessage(
+          !res.ok
+            ? 'Server error. Please try again later.'
+            : 'Something went wrong. Please try again later.'
+        );
+        setStatus('error');
         return;
       }
 
@@ -117,7 +128,7 @@ export default function SupportForm() {
           <Clock className="w-8 h-8 text-amber-500" />
           <h4 className="text-sm font-semibold text-black dark:text-white">Daily Limit Reached</h4>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-xs">
-            You&apos;ve submitted the maximum of 10 support tickets in the last 24 hours. Please try again tomorrow.
+            You&apos;ve submitted the maximum limit of approximately 10 support tickets in the last 24 hours. Please try again tomorrow.
           </p>
         </div>
       </div>
@@ -156,9 +167,11 @@ export default function SupportForm() {
             className={inputClass}
             placeholder="you@example.com"
             disabled={status === 'loading'}
+            aria-invalid={fieldErrors.email ? true : undefined}
+            aria-describedby={fieldErrors.email ? 'support-email-error' : undefined}
           />
           {fieldErrors.email && (
-            <span className="text-[10px] text-red-500 normal-case font-normal">{fieldErrors.email}</span>
+            <span id="support-email-error" className="text-[10px] text-red-500 normal-case font-normal">{fieldErrors.email}</span>
           )}
         </div>
 
@@ -176,9 +189,11 @@ export default function SupportForm() {
             className={inputClass}
             placeholder="Curve query, matching issues..."
             disabled={status === 'loading'}
+            aria-invalid={fieldErrors.subject ? true : undefined}
+            aria-describedby={fieldErrors.subject ? 'support-subject-error' : undefined}
           />
           {fieldErrors.subject && (
-            <span className="text-[10px] text-red-500 normal-case font-normal">{fieldErrors.subject}</span>
+            <span id="support-subject-error" className="text-[10px] text-red-500 normal-case font-normal">{fieldErrors.subject}</span>
           )}
         </div>
 
@@ -196,9 +211,11 @@ export default function SupportForm() {
             className={`${inputClass} resize-none`}
             placeholder="Provide details..."
             disabled={status === 'loading'}
+            aria-invalid={fieldErrors.details ? true : undefined}
+            aria-describedby={fieldErrors.details ? 'support-details-error' : undefined}
           />
           {fieldErrors.details && (
-            <span className="text-[10px] text-red-500 normal-case font-normal">{fieldErrors.details}</span>
+            <span id="support-details-error" className="text-[10px] text-red-500 normal-case font-normal">{fieldErrors.details}</span>
           )}
         </div>
 
