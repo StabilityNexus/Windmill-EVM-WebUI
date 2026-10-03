@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Footer() {
   return (
@@ -8,7 +9,7 @@ export default function Footer() {
           {/* Brand Info */}
           <div className="flex flex-col gap-4">
             <Link href="/" className="flex items-center gap-2">
-              <img src="/windmill-logo.svg" alt="Windmill" width={32} height={32} className="shrink-0" />
+              <Image src="/windmill-logo.svg" alt="Windmill" width={32} height={32} className="shrink-0" />
               <span className="font-sans text-lg font-bold tracking-tight text-white">
                 WINDMILL
               </span>
@@ -23,13 +24,13 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-white tracking-wider uppercase">Protocol</h4>
             <ul className="flex flex-col gap-2">
               <li>
-                <a href="#features" className="text-sm hover:text-white transition-colors">Features</a>
+                <Link href="/#features" className="text-sm hover:text-white transition-colors">Features</Link>
               </li>
               <li>
-                <a href="#how-it-works" className="text-sm hover:text-white transition-colors">How It Works</a>
+                <Link href="/how-it-works" className="text-sm hover:text-white transition-colors">How It Works</Link>
               </li>
               <li>
-                <a href="#stats" className="text-sm hover:text-white transition-colors">Statistics</a>
+                <Link href="/stats" className="text-sm hover:text-white transition-colors">Statistics</Link>
               </li>
             </ul>
           </div>
@@ -90,7 +91,7 @@ export default function Footer() {
 
         <div className="border-t border-neutral-900 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src="/stability.svg" alt="Stability Nexus" width={24} height={24} className="shrink-0" />
+            <Image src="/stability.svg" alt="Stability Nexus" width={24} height={24} className="shrink-0" />
             <p className="text-xs text-neutral-500" suppressHydrationWarning>
               &copy; {new Date().getFullYear()} Stability Nexus. All rights reserved.
             </p>

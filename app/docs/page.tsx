@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import WalletModal from '@/components/wallet/WalletModal';
 import { SUPPORTED_CHAINS } from '@/lib/contractConfig';
+import CodeBlock from '@/components/ui/CodeBlock';
 
 const DOCS_SECTIONS = [
   { id: 'overview', label: 'Overview' },
@@ -85,14 +86,14 @@ export default function DocsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 bg-neutral-50/30 dark:bg-neutral-900/50">
                   <h3 className="text-sm font-bold text-black dark:text-white mb-2">Core Contract</h3>
-                  <p className="text-xs text-neutral-500">
-                    <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-[11px]">WindmillExchange.sol</code> — Handles
+                  <p className="text-xs text-muted-foreground">
+                    <code className="bg-neutral-100 text-black px-1.5 py-0.5 rounded text-[11px]">WindmillExchange.sol</code> — Handles
                     order creation, cancellation, matching, and settlement with ReentrancyGuard protection.
                   </p>
                 </div>
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 bg-neutral-50/30 dark:bg-neutral-900/50">
                   <h3 className="text-sm font-bold text-black dark:text-white mb-2">Keeper Network</h3>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-muted-foreground">
                     Node.js service using ethers.js that continuously scans for matchable order pairs and executes
                     settlement transactions to earn 0.1% fees.
                   </p>
@@ -114,14 +115,14 @@ export default function DocsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                   <h4 className="text-sm font-bold text-black dark:text-white mb-1">Buy Orders (Negative Slope)</h4>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-muted-foreground">
                     Buyer&apos;s willingness to pay <em>decreases</em> over time. The price slides downward along the curve
                     until it meets a compatible sell order or expires.
                   </p>
                 </div>
                 <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                   <h4 className="text-sm font-bold text-black dark:text-white mb-1">Sell Orders (Positive Slope)</h4>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-muted-foreground">
                     Seller&apos;s asking price <em>increases</em> over time. This creates natural price convergence where
                     buy and sell curves eventually intersect.
                   </p>
@@ -129,15 +130,15 @@ export default function DocsPage() {
               </div>
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                 <h4 className="text-sm font-bold text-black dark:text-white mb-2">Price Bounds</h4>
-                <ul className="text-xs text-neutral-500 flex flex-col gap-1.5">
-                  <li>• <code className="bg-neutral-100 px-1 py-0.5 rounded">minPrice</code> — Floor price. The curve never goes below this value (0 = no floor).</li>
-                  <li>• <code className="bg-neutral-100 px-1 py-0.5 rounded">maxPrice</code> — Ceiling price. The curve never exceeds this value (0 = no ceiling).</li>
-                  <li>• <code className="bg-neutral-100 px-1 py-0.5 rounded">expiry</code> — Unix timestamp after which the order cannot be matched (0 = no expiry).</li>
+                <ul className="text-xs text-muted-foreground flex flex-col gap-1.5">
+                  <li>• <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">minPrice</code> — Floor price. The curve never goes below this value (0 = no floor).</li>
+                  <li>• <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">maxPrice</code> — Ceiling price. The curve never exceeds this value (0 = no ceiling).</li>
+                  <li>• <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">expiry</code> — Unix timestamp after which the order cannot be matched (0 = no expiry).</li>
                 </ul>
               </div>
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl p-4">
                 <h4 className="text-sm font-bold text-black dark:text-white mb-2">Settlement Price</h4>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-muted-foreground">
                   When two orders match, the settlement price is computed as the midpoint of the buy and sell prices at the
                   current timestamp. The executed quantity is determined by the smaller of: (1) what the buyer can afford, and
                   (2) what the seller has remaining.
@@ -149,13 +150,14 @@ export default function DocsPage() {
           {activeSection === 'api' && (
             <div data-reveal className="reveal-fade-up flex flex-col gap-6">
               <h2 className="text-2xl font-extrabold text-black dark:text-white">API Reference</h2>
-              <p className="text-neutral-500">Complete public interface of the WindmillExchange smart contract.</p>
+              <p className="text-muted-foreground">Complete public interface of the WindmillExchange smart contract.</p>
 
               {/* createOrder */}
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white font-mono mb-2">createOrder()</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-3 font-mono text-[11px] text-black dark:text-white overflow-x-auto mb-3">
-                  <pre className="whitespace-pre">{`function createOrder(
+                <CodeBlock
+                  className="mb-3 text-[11px]"
+                  code={`function createOrder(
   address tokenIn,    // Token deposited by maker
   address tokenOut,   // Token desired by maker
   uint256 amountIn,   // Amount of tokenIn to deposit
@@ -165,9 +167,9 @@ export default function DocsPage() {
   uint256 maxPrice,   // Ceiling price (0 = none)
   uint256 expiry,     // Unix expiry timestamp (0 = none)
   bool isBuy          // true = buy order, false = sell
-) external payable returns (uint256 orderId)`}</pre>
-                </div>
-                <p className="text-xs text-neutral-500">
+) external payable returns (uint256 orderId)`}
+                />
+                <p className="text-xs text-muted-foreground">
                   Creates a new dynamic-priced order. The maker deposits <code>amountIn</code> tokens (or ETH for WETH pairs).
                   Returns the assigned order ID.
                 </p>
@@ -176,10 +178,11 @@ export default function DocsPage() {
               {/* cancelOrder */}
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white font-mono mb-2">cancelOrder()</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-3 font-mono text-[11px] text-black dark:text-white overflow-x-auto mb-3">
-                  <pre className="whitespace-pre">{`function cancelOrder(uint256 orderId) external`}</pre>
-                </div>
-                <p className="text-xs text-neutral-500">
+                <CodeBlock
+                  className="mb-3 text-[11px]"
+                  code={`function cancelOrder(uint256 orderId) external`}
+                />
+                <p className="text-xs text-muted-foreground">
                   Cancels an active order. Only the maker can cancel. Refunds remaining deposited tokens to the maker.
                 </p>
               </div>
@@ -187,14 +190,15 @@ export default function DocsPage() {
               {/* matchOrders */}
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white font-mono mb-2">matchOrders()</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-3 font-mono text-[11px] text-black dark:text-white overflow-x-auto mb-3">
-                  <pre className="whitespace-pre">{`function matchOrders(
+                <CodeBlock
+                  className="mb-3 text-[11px]"
+                  code={`function matchOrders(
   uint256 buyOrderId,
   uint256 sellOrderId,
   uint256 deadline      // Keeper deadline timestamp
-) external`}</pre>
-                </div>
-                <p className="text-xs text-neutral-500">
+) external`}
+                />
+                <p className="text-xs text-muted-foreground">
                   Settles a compatible buy-sell pair. Called by keepers. Awards 0.1% fee to <code>msg.sender</code>.
                   Requires buy price ≥ sell price at the current timestamp.
                 </p>
@@ -203,14 +207,15 @@ export default function DocsPage() {
               {/* matchOrdersBatch */}
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white font-mono mb-2">matchOrdersBatch()</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-3 font-mono text-[11px] text-black dark:text-white overflow-x-auto mb-3">
-                  <pre className="whitespace-pre">{`function matchOrdersBatch(
+                <CodeBlock
+                  className="mb-3 text-[11px]"
+                  code={`function matchOrdersBatch(
   uint256 orderId,
   uint256[] calldata counterOrderIds,
   uint256 deadline
-) external`}</pre>
-                </div>
-                <p className="text-xs text-neutral-500">
+) external`}
+                />
+                <p className="text-xs text-muted-foreground">
                   Batch matches one order against multiple counter-orders in a single transaction for gas efficiency.
                 </p>
               </div>
@@ -221,19 +226,19 @@ export default function DocsPage() {
                 <div className="flex flex-col gap-3 text-xs font-mono">
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">getOrder(uint256 orderId) → Order</code>
-                    <span className="text-neutral-400 font-sans">Returns the full order struct for a given ID.</span>
+                    <span className="text-muted-foreground font-sans">Returns the full order struct for a given ID.</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">getOrdersByPair(address tokenA, address tokenB, uint256 cursor, uint256 limit) → uint256[]</code>
-                    <span className="text-neutral-400 font-sans">Paginated list of order IDs for a token pair (max 500 per page).</span>
+                    <span className="text-muted-foreground font-sans">Paginated list of order IDs for a token pair (max 500 per page).</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">currentPrice(uint256 orderId, uint256 timestamp) → uint256</code>
-                    <span className="text-neutral-400 font-sans">Computes the order&apos;s price at a given timestamp using the price curve formula.</span>
+                    <span className="text-muted-foreground font-sans">Computes the order&apos;s price at a given timestamp using the price curve formula.</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <code className="text-black dark:text-white">totalOrders() → uint256</code>
-                    <span className="text-neutral-400 font-sans">Total number of orders created (including inactive).</span>
+                    <span className="text-muted-foreground font-sans">Total number of orders created (including inactive).</span>
                   </div>
                 </div>
               </div>
@@ -244,74 +249,79 @@ export default function DocsPage() {
             <div data-reveal className="reveal-fade-up flex flex-col gap-6">
               <h2 className="text-2xl font-extrabold text-black dark:text-white">Deployment Guide</h2>
 
-              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-black dark:text-white mb-3">Prerequisites</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-4 font-mono text-xs text-black dark:text-white overflow-x-auto">
-                  <pre className="whitespace-pre">{`# Install Foundry
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-
-# Verify
-forge --version
-cast --version
-anvil --version`}</pre>
-                </div>
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 flex flex-col gap-4">
+                <h3 className="text-sm font-bold text-black dark:text-white">Prerequisites</h3>
+                <CodeBlock
+                  label="1. Install Foundry toolchain"
+                  platforms={{
+                    macos: `curl -L https://foundry.paradigm.xyz | bash\nfoundryup`,
+                    linux: `curl -L https://foundry.paradigm.xyz | bash\nfoundryup`,
+                    windows: `irm https://foundry.paradigm.xyz/win | iex\nfoundryup`,
+                  }}
+                />
+                <CodeBlock
+                  label="2. Verify installation"
+                  platforms={{
+                    macos: `forge --version && cast --version && anvil --version`,
+                    linux: `forge --version && cast --version && anvil --version`,
+                    windows: `forge --version; cast --version; anvil --version`,
+                  }}
+                />
               </div>
 
-              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-black dark:text-white mb-3">Environment Setup</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-4 font-mono text-xs text-black dark:text-white overflow-x-auto">
-                  <pre className="whitespace-pre">{`cp .env.example .env
-
-# Edit .env:
-PRIVATE_KEY=0x...          # Deployer wallet private key
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 flex flex-col gap-4">
+                <h3 className="text-sm font-bold text-black dark:text-white">Environment Setup</h3>
+                <CodeBlock
+                  label="Initialize environment file"
+                  platforms={{
+                    macos: `cp .env.example .env`,
+                    linux: `cp .env.example .env`,
+                    windows: `Copy-Item .env.example .env`,
+                  }}
+                />
+                <CodeBlock
+                  label="Required environment variables"
+                  code={`PRIVATE_KEY=0x...          # Deployer wallet private key
 ETHERSCAN_API_KEY=...      # For contract verification
-WETH_ADDRESS=0xC02a...     # Chain-specific WETH address`}</pre>
-                </div>
+WETH_ADDRESS=0xC02a...     # Chain-specific WETH address`}
+                />
               </div>
 
-              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-black dark:text-white mb-3">Deploy to Testnet</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-4 font-mono text-xs text-black dark:text-white overflow-x-auto">
-                  <pre className="whitespace-pre">{`# Deploy to Sepolia
-forge script script/DeployWindmill.s.sol \\
-  --rpc-url sepolia \\
-  --broadcast \\
-  --verify \\
-  -vvvv
-
-# Deploy to Mordor (ETC testnet)
-forge script script/DeployWindmill.s.sol \\
-  --rpc-url mordor \\
-  --broadcast \\
-  -vvvv`}</pre>
-                </div>
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 flex flex-col gap-4">
+                <h3 className="text-sm font-bold text-black dark:text-white">Deploy to Testnet</h3>
+                <CodeBlock
+                  label="Sepolia Testnet"
+                  code={`forge script script/DeployWindmill.s.sol --rpc-url sepolia --broadcast --verify -vvvv`}
+                />
+                <CodeBlock
+                  label="Mordor (ETC Testnet)"
+                  code={`forge script script/DeployWindmill.s.sol --rpc-url mordor --broadcast -vvvv`}
+                />
               </div>
 
-              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-black dark:text-white mb-3">Deploy to Mainnet</h3>
-                <div className="bg-neutral-50 dark:bg-neutral-800/80 rounded-xl p-4 font-mono text-xs text-black dark:text-white overflow-x-auto">
-                  <pre className="whitespace-pre">{`# Ethereum Mainnet
-forge script script/DeployWindmill.s.sol \\
-  --rpc-url ethereum --broadcast --verify -vvvv
-
-# Base
-forge script script/DeployWindmill.s.sol \\
-  --rpc-url base --broadcast --verify -vvvv
-
-# Polygon
-forge script script/DeployWindmill.s.sol \\
-  --rpc-url polygon --broadcast --verify -vvvv`}</pre>
-                </div>
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 flex flex-col gap-4">
+                <h3 className="text-sm font-bold text-black dark:text-white">Deploy to Mainnet</h3>
+                <CodeBlock
+                  label="Ethereum Mainnet"
+                  code={`forge script script/DeployWindmill.s.sol --rpc-url ethereum --broadcast --verify -vvvv`}
+                />
+                <CodeBlock
+                  label="Base Mainnet"
+                  code={`forge script script/DeployWindmill.s.sol --rpc-url base --broadcast --verify -vvvv`}
+                />
+                <CodeBlock
+                  label="Polygon Mainnet"
+                  code={`forge script script/DeployWindmill.s.sol --rpc-url polygon --broadcast --verify -vvvv`}
+                />
               </div>
 
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white mb-3">Post-Deployment</h3>
-                <ol className="flex flex-col gap-2 text-xs text-neutral-600 list-decimal pl-5">
+                <ol className="flex flex-col gap-2 text-xs text-muted-foreground list-decimal pl-5">
                   <li>Record the deployed contract address from console output</li>
-                  <li>Set <code className="bg-neutral-100 px-1 py-0.5 rounded">NEXT_PUBLIC_CONTRACT_ADDRESS_*</code> in the WebUI .env</li>
-                  <li>Set <code className="bg-neutral-100 px-1 py-0.5 rounded">CONTRACT_ADDRESS</code> in the Keeper .env</li>
-                  <li>Optionally configure protocol fee via <code className="bg-neutral-100 px-1 py-0.5 rounded">setProtocolFee()</code></li>
+                  <li>Set <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">NEXT_PUBLIC_CONTRACT_ADDRESS_*</code> in the WebUI .env</li>
+                  <li>Set <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">CONTRACT_ADDRESS</code> in the Keeper .env</li>
+                  <li>Optionally configure protocol fee via <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">setProtocolFee()</code></li>
                 </ol>
               </div>
             </div>
@@ -327,10 +337,10 @@ forge script script/DeployWindmill.s.sol \\
 
               <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5">
                 <h3 className="text-sm font-bold text-black dark:text-white mb-2">Strategy: Windmill</h3>
-                <p className="text-xs text-neutral-500 mb-3">
-                  The <code className="bg-neutral-100 px-1 py-0.5 rounded">windmill</code> strategy implements:
+                <p className="text-xs text-muted-foreground mb-3">
+                  The <code className="bg-neutral-100 text-black px-1 py-0.5 rounded">windmill</code> strategy implements:
                 </p>
-                <ol className="flex flex-col gap-2 text-xs text-neutral-600 list-decimal pl-5">
+                <ol className="flex flex-col gap-2 text-xs text-muted-foreground list-decimal pl-5">
                   <li>Event-based pair discovery from <code>OrderCreated</code> logs</li>
                   <li>Paginated order fetching via <code>getOrdersByPair()</code></li>
                   <li>On-chain price resolution via <code>currentPrice()</code></li>
@@ -350,7 +360,7 @@ forge script script/DeployWindmill.s.sol \\
                         <th className="text-left p-2">Description</th>
                       </tr>
                     </thead>
-                    <tbody className="text-neutral-600">
+                    <tbody className="text-muted-foreground">
                       <tr className="border-b border-neutral-50"><td className="p-2 font-mono">KEEPER_STRATEGY</td><td className="p-2">noop</td><td className="p-2">Strategy name (use &quot;windmill&quot;)</td></tr>
                       <tr className="border-b border-neutral-50"><td className="p-2 font-mono">RPC_URL</td><td className="p-2">localhost:8545</td><td className="p-2">JSON-RPC endpoint</td></tr>
                       <tr className="border-b border-neutral-50"><td className="p-2 font-mono">EXPECTED_CHAIN_ID</td><td className="p-2">—</td><td className="p-2">Safety check for chain ID</td></tr>
@@ -389,9 +399,9 @@ forge script script/DeployWindmill.s.sol \\
                     {Object.values(SUPPORTED_CHAINS).map((chain) => (
                       <tr key={chain.chainId} className="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
                         <td className="p-3 font-semibold text-black dark:text-white">{chain.name}</td>
-                        <td className="p-3 font-mono text-neutral-500">{chain.chainId}</td>
-                        <td className="p-3 text-neutral-500">{chain.chainId === 11155111 || chain.chainId === 63 ? 'Testnet' : 'Mainnet'}</td>
-                        <td className="p-3 text-neutral-400 font-mono text-[10px] max-w-[200px] truncate">{chain.rpcUrl}</td>
+                        <td className="p-3 font-mono text-muted-foreground">{chain.chainId}</td>
+                        <td className="p-3 text-muted-foreground">{chain.chainId === 11155111 || chain.chainId === 63 ? 'Testnet' : 'Mainnet'}</td>
+                        <td className="p-3 text-muted-foreground font-mono text-[10px] max-w-[200px] truncate">{chain.rpcUrl}</td>
                         <td className="p-3">
                           {chain.contractAddress ? (
                             <a
@@ -403,7 +413,7 @@ forge script script/DeployWindmill.s.sol \\
                               {chain.contractAddress.slice(0, 8)}...
                             </a>
                           ) : (
-                            <span className="text-neutral-400 text-[10px]">Not deployed</span>
+                            <span className="text-muted-foreground text-[10px]">Not deployed</span>
                           )}
                         </td>
                       </tr>

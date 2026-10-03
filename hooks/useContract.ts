@@ -22,7 +22,7 @@ export function useContract() {
 
   // If wallet is connected, use wallet's chainId;
   // Otherwise find the first configured chain with a contract address, or fall back to DEFAULT_CHAIN_ID
-  const configuredChainId = useMemo(() => {
+  const readChainId = useMemo(() => {
     if (chainId) return chainId;
     if (SUPPORTED_CHAINS[DEFAULT_CHAIN_ID]?.contractAddress) return DEFAULT_CHAIN_ID;
     const deployed = Object.values(SUPPORTED_CHAINS).find((c) => !!c.contractAddress);
@@ -30,14 +30,14 @@ export function useContract() {
   }, [chainId]);
 
   const contractAddress = useMemo(() => {
-    if (!configuredChainId) return null;
-    return SUPPORTED_CHAINS[configuredChainId]?.contractAddress || null;
-  }, [configuredChainId]);
+    if (!readChainId) return null;
+    return SUPPORTED_CHAINS[readChainId]?.contractAddress || null;
+  }, [readChainId]);
 
   const rpcUrl = useMemo(() => {
-    if (!configuredChainId) return null;
-    return SUPPORTED_CHAINS[configuredChainId]?.rpcUrl || null;
-  }, [configuredChainId]);
+    if (!readChainId) return null;
+    return SUPPORTED_CHAINS[readChainId]?.rpcUrl || null;
+  }, [readChainId]);
 
   // ── Read contract (via RPC or provider) ───────────────────────────
   const readContract = useCallback(
@@ -222,6 +222,9 @@ export function useContract() {
   return {
     contractAddress,
     isReady: isConnected && !!contractAddress,
+    // True once a contract address resolves for the read chain (connected or
+    // default) — view calls work via the public RPC fallback with no wallet.
+    canRead: !!contractAddress,
     isReadReady: !!contractAddress && (!!provider || !!rpcUrl),
     readContract,
     writeContract,
@@ -235,28 +238,28 @@ export function useContract() {
  * useTotalOrders — fetches the total order count from the contract.
  */
 export function useTotalOrders() {
-  const { readContract, isReadReady } = useContract();
+  const { readContract, canRead } = useContract();
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState(false);
 
   const fetch = useCallback(async () => {
-    if (!isReadReady) return;
+    if (!canRead) return;
     setLoading(true);
     const { data, error } = await readContract('totalOrders');
     if (!error && data !== null) {
       setTotal(Number(data));
     }
     setLoading(false);
-  }, [isReadReady, readContract]);
+  }, [canRead, readContract]);
 
   useEffect(() => {
-    if (isReadReady) {
+    if (canRead) {
       const timer = setTimeout(() => {
         fetch();
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [isReadReady, fetch]);
+  }, [canRead, fetch]);
 
   return { total, loading, refetch: fetch };
 }
@@ -265,11 +268,11 @@ export function useTotalOrders() {
  * usePaused — checks if the exchange is paused.
  */
 export function usePaused() {
-  const { readContract, isReadReady } = useContract();
+  const { readContract, canRead } = useContract();
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
-    if (!isReadReady) return;
+    if (!canRead) return;
     let isMounted = true;
     readContract('paused').then(({ data }) => {
       if (isMounted && data !== null) setPaused(Boolean(data));
@@ -277,7 +280,7 @@ export function usePaused() {
     return () => {
       isMounted = false;
     };
-  }, [isReadReady, readContract]);
+  }, [canRead, readContract]);
 
   return paused;
 }
