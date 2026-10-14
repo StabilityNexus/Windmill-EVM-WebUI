@@ -22,6 +22,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [networkDropdownOpen, setNetworkDropdownOpen] = useState(false);
+  const [mobileNetworkDropdownOpen, setMobileNetworkDropdownOpen] = useState(false);
   const networkDropdownRef = useRef<HTMLDivElement>(null);
 
   const networks = ['Localhost', 'Sepolia', 'Ethereum', 'Base', 'Polygon', 'BSC', 'ETC'];
@@ -49,6 +50,11 @@ export default function Navbar() {
       document.removeEventListener('keydown', handleEscapeKey);
     };
   }, [networkDropdownOpen]);
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+    setMobileNetworkDropdownOpen(false);
+  };
 
   const navItems = [
     { name: 'Home', link: '/' },
@@ -143,7 +149,7 @@ export default function Navbar() {
         <MobileNav className="w-full max-w-[calc(100vw-2rem)]">
           <MobileNavHeader className="px-4 py-2">
             {/* Logo */}
-            <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2">
+            <Link href="/" onClick={closeMobileMenu} className="flex items-center gap-2">
               <Image src="/windmill-logo.svg" alt="Windmill" width={32} height={32} className="shrink-0" />
               <span className="font-sans text-base font-bold tracking-tight text-black dark:text-white">
                 WINDMILL
@@ -153,14 +159,14 @@ export default function Navbar() {
               <ThemeToggle />
               <MobileNavToggle
                 isOpen={isMobileMenuOpen}
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                onClick={() => (isMobileMenuOpen ? closeMobileMenu() : setIsMobileMenuOpen(true))}
               />
             </div>
           </MobileNavHeader>
 
           <MobileNavMenu
             isOpen={isMobileMenuOpen}
-            onClose={() => setIsMobileMenuOpen(false)}
+            onClose={closeMobileMenu}
             className="bg-white/95 border border-neutral-100/50 backdrop-blur-xl p-6 rounded-2xl shadow-xl mt-4 dark:bg-neutral-900/95 dark:border-neutral-800/80"
           >
             <div className="flex flex-col gap-4 w-full">
@@ -168,7 +174,7 @@ export default function Navbar() {
                 <Link
                   key={item.name}
                   href={item.link}
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={closeMobileMenu}
                   aria-current={item.active ? 'page' : undefined}
                   className={`py-1 text-base font-semibold transition-colors duration-200 ${
                     item.active
@@ -193,14 +199,40 @@ export default function Navbar() {
               {/* Wallet Button */}
               {isConnected ? (
                 <div className="flex flex-col gap-3">
-                  <div className="flex justify-between items-center text-xs font-bold text-black dark:text-white border border-neutral-100 dark:border-neutral-800 rounded-xl px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/60">
-                    <span>Network</span>
-                    <span className="text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{network}</span>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setMobileNetworkDropdownOpen(!mobileNetworkDropdownOpen)}
+                      aria-expanded={mobileNetworkDropdownOpen}
+                      className="w-full flex justify-between items-center text-xs font-bold text-black dark:text-white border border-neutral-100 dark:border-neutral-800 rounded-xl px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/60 cursor-pointer"
+                    >
+                      <span>Network</span>
+                      <span className="text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                        {network} ▾
+                      </span>
+                    </button>
+                    {mobileNetworkDropdownOpen && (
+                      <div className="mt-2 w-full rounded-xl border border-neutral-100 bg-neutral-50 p-1.5 dark:border-neutral-800 dark:bg-neutral-800/60">
+                        {networks.map((net) => (
+                          <button
+                            key={net}
+                            type="button"
+                            onClick={() => {
+                              switchNetwork(net);
+                              setMobileNetworkDropdownOpen(false);
+                            }}
+                            className="w-full text-left rounded-lg px-3 py-2 text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-700 text-black dark:text-white transition-colors cursor-pointer"
+                          >
+                            {net}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <NavbarButton
                     onClick={() => {
                       disconnectWallet();
-                      setIsMobileMenuOpen(false);
+                      closeMobileMenu();
                     }}
                     variant="dark"
                     className="w-full text-center py-2.5 rounded-xl text-xs"
@@ -212,7 +244,7 @@ export default function Navbar() {
                 <NavbarButton
                   onClick={() => {
                     setWalletModalOpen(true);
-                    setIsMobileMenuOpen(false);
+                    closeMobileMenu();
                   }}
                   variant="dark"
                   className="w-full text-center py-2.5 rounded-xl text-xs"
