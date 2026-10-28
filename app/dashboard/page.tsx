@@ -5,7 +5,7 @@ import { useWallet } from '@/context/WalletContext';
 import { useContract } from '@/hooks/useContract';
 import { SUPPORTED_TOKENS, getTokenAddress, getExplorerTxUrl } from '@/lib/contractConfig';
 import WalletModal from '@/components/wallet/WalletModal';
-import { Zap, X, ExternalLink, RefreshCw, AlertCircle, ArrowRightLeft, Layers, CheckCircle2 } from 'lucide-react';
+import { Zap, X, ExternalLink, RefreshCw, Layers, CheckCircle2 } from 'lucide-react';
 
 interface Order {
   id: number;
@@ -93,8 +93,9 @@ export default function DashboardPage() {
   const [txStatus, setTxStatus] = useState<string | null>(null);
 
   // ── Token Balance State ───────────────────────────────────────────
-  const [userTokenBalance, setUserTokenBalance] = useState<string | null>(null);
-
+  const [tokenInBalance, setTokenInBalance] = useState<number | null>(null);
+  const [isFetchingBalance, setIsFetchingBalance] = useState<boolean>(false);
+  
   // ── Tab State: 'my-orders' | 'all-orders' | 'matches' ─────────────
   const [activeTab, setActiveTab] = useState<'my-orders' | 'all-orders' | 'matches'>('my-orders');
 
@@ -185,11 +186,8 @@ export default function DashboardPage() {
   }, [fetchTokenInBalance]);
 
   // ── Fetch on-chain data ───────────────────────────────────────────
-  const { fetchEvents } = useContract();
 
   // ── Persistent refs to prevent state overwrites on polling ──────
-  const inactiveOrderIdsRef = useRef<Set<number>>(new Set());
-  const simulatedSettledRef = useRef<Array<{ id: number; pair: string; amount: string; price: string; age: string; txHash: string }>>([]);
 
   const allActiveOrders = useMemo(() => {
     return orders.filter((o) => o.active);
@@ -220,42 +218,7 @@ export default function DashboardPage() {
     return pairs;
   }, [allActiveOrders]);
 
-  // ── User Token Balance Fetcher ────────────────────────────────────
-  useEffect(() => {
-    if (!fullAddress || !chainId) {
-      setUserTokenBalance(null);
-      return;
-    }
-
-    const tokenInAddr = getTokenAddress(tokenIn, chainId);
-    if (!tokenInAddr) {
-      setUserTokenBalance(null);
-      return;
-    }
-
-    let isMounted = true;
-    const fetchBalance = async () => {
-      try {
-        const res = await readERC20(tokenInAddr, 'balanceOf', [fullAddress]);
-        if (res.data !== null && res.data !== undefined && isMounted) {
-          const tokenMeta = SUPPORTED_TOKENS.find((t) => t.symbol === tokenIn);
-          const dec = tokenMeta?.decimals || 18;
-          const bal = Number(BigInt(String(res.data))) / 10 ** dec;
-          setUserTokenBalance(bal.toFixed(4));
-        }
-      } catch {
-        if (isMounted) setUserTokenBalance(null);
-      }
-    };
-
-    fetchBalance();
-    const interval = setInterval(fetchBalance, 6000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, [fullAddress, chainId, tokenIn, readERC20]);
-
+  
   // ── Fetch on-chain data ───────────────────────────────────────────
   const fetchOnChainData = useCallback(async () => {
     if (!isReady) return;
@@ -833,8 +796,6 @@ export default function DashboardPage() {
                   <select
                     id="token-in-select"
                     value={tokenIn}
-                    onChange={(e) => setTokenIn(e.target.value)}
-                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                     onChange={(e) => handleTokenInChange(e.target.value)}
                     className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
                   >
@@ -852,8 +813,6 @@ export default function DashboardPage() {
                   <select
                     id="token-out-select"
                     value={tokenOut}
-                    onChange={(e) => setTokenOut(e.target.value)}
-                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                     onChange={(e) => handleTokenOutChange(e.target.value)}
                     className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
                   >
@@ -866,21 +825,6 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Amount with User Token Balance */}
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center text-[9px] text-neutral-400 dark:text-neutral-500">
-                  <label htmlFor="amount-input">Amount</label>
-                  {userTokenBalance !== null && (
-                    <span className="font-mono flex items-center gap-1">
-                      Bal: <span className="text-black dark:text-white font-bold">{userTokenBalance}</span> {tokenIn}
-                      <button
-                        type="button"
-                        onClick={() => setAmount(Number(userTokenBalance))}
-                        className="px-1 py-0.2 rounded bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white text-[8px] font-bold"
-                      >
-                        MAX
-                      </button>
-                    </span>
               {/* Amount with Live Balance & [MAX] Fill */}
               <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between">
@@ -919,7 +863,6 @@ export default function DashboardPage() {
                   required
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
-                  className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                   className={`border bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden transition-colors ${
                     isConnected && tokenInBalance !== null && amount > tokenInBalance
                       ? 'border-red-500 dark:border-red-500 focus:border-red-500'
@@ -1020,13 +963,10 @@ export default function DashboardPage() {
 
               <button
                 type="submit"
-                disabled={isSubmitting || isPaused || !isConnected}
-                className="mt-2 w-full rounded-full bg-black dark:bg-white py-3 text-center text-xs font-bold text-white dark:text-black uppercase hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-all disabled:opacity-50 cursor-pointer shadow-sm"
-              >
-                {isSubmitting ? 'Deploying Order...' : isPaused ? 'Exchange Paused' : 'Deploy Curve Order'}
                 disabled={
                   isSubmitting ||
                   isPaused ||
+                  !isConnected ||
                   tokenIn === tokenOut ||
                   (isConnected && tokenInBalance !== null && amount > tokenInBalance)
                 }
@@ -1036,6 +976,8 @@ export default function DashboardPage() {
                   ? 'Deploying...'
                   : isPaused
                   ? 'Exchange Paused'
+                  : !isConnected
+                  ? 'Connect Wallet to Deploy'
                   : tokenIn === tokenOut
                   ? 'Select Different Tokens'
                   : isConnected && tokenInBalance !== null && amount > tokenInBalance
