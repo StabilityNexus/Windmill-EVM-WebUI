@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Geist } from 'next/font/google';
+import { Inter, Geist, Outfit } from 'next/font/google';
 import './globals.css';
 import { WalletProvider } from '@/context/WalletContext';
 import { ThemeProvider } from '@/components/theme-provider';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import ConditionalLayout from '@/components/layout/ConditionalLayout';
 import { cn } from "@/lib/utils";
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
@@ -12,6 +11,12 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 const inter = Inter({
   variable: '--font-inter',
   subsets: ['latin'],
+});
+
+const outfit = Outfit({
+  variable: '--font-outfit',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
 });
 
 export const metadata: Metadata = {
@@ -83,13 +88,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("scroll-smooth", "font-sans", geist.variable)} suppressHydrationWarning>
+    <html lang="en" className={cn("scroll-smooth", "font-sans", geist.variable, outfit.variable)} suppressHydrationWarning>
       <body className={`${inter.variable} antialiased min-h-screen bg-background text-foreground transition-colors duration-300`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
           <WalletProvider>
-            <Navbar />
-            {children}
-            <Footer />
+            <ConditionalLayout>
+              {children}
+            </ConditionalLayout>
           </WalletProvider>
         </ThemeProvider>
       </body>

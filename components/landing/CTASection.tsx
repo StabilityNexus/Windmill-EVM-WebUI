@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 export default function CTASection() {
@@ -31,22 +32,18 @@ export default function CTASection() {
 
           {/* Interactive CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full sm:w-auto">
-            <a
-              href="https://github.com/StabilityNexus/Windmill-EVM-Contracts"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 w-full sm:w-auto items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-black transition-all duration-300 hover:bg-neutral-100 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0"
+            <Link
+              href="/dashboard"
+              className="inline-flex h-11 w-full sm:w-auto items-center justify-center rounded-full bg-white px-8 text-sm font-semibold text-black transition-all duration-300 hover:bg-neutral-100 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 cursor-pointer"
             >
-              Launch Platform
-            </a>
-            <a
-              href="https://github.com/StabilityNexus/Windmill-EVM-Contracts"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 w-full sm:w-auto items-center justify-center rounded-full border border-neutral-800 bg-transparent px-8 text-sm font-semibold text-white transition-all duration-300 hover:border-neutral-600 hover:bg-neutral-900 hover:-translate-y-0.5"
+              Launch Exchange Dashboard →
+            </Link>
+            <Link
+              href="/keepers"
+              className="inline-flex h-11 w-full sm:w-auto items-center justify-center rounded-full border border-neutral-700 bg-transparent px-8 text-sm font-semibold text-white transition-all duration-300 hover:border-white hover:bg-neutral-900 hover:-translate-y-0.5 cursor-pointer"
             >
-              Read Documentation
-            </a>
+              Run Keeper Node
+            </Link>
           </div>
         </div>
       </div>

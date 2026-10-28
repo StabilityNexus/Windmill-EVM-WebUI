@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /pr-preview/
+
+Sitemap: https://windmill.aossie.org/sitemap.xml
+

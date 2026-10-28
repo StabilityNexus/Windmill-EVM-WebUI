@@ -212,6 +212,7 @@ export function useContract() {
 
   return {
     contractAddress,
+    rpcUrl,
     isReady: isConnected && !!contractAddress,
     readContract,
     writeContract,
@@ -375,6 +376,34 @@ export function useOrderActions() {
     [writeContract]
   );
 
-  return { createOrder, cancelOrder, approveERC20, isReady, submitting };
+  const matchOrders = useCallback(
+    async (buyOrderId: number | bigint, sellOrderId: number | bigint, deadline?: number) => {
+      setSubmitting(true);
+      try {
+        const d = deadline ?? Math.floor(Date.now() / 1000) + 3600;
+        const res = await writeContract('matchOrders', [buyOrderId, sellOrderId, d]);
+        return res;
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [writeContract]
+  );
+
+  const matchOrdersBatch = useCallback(
+    async (orderId: number | bigint, counterOrderIds: (number | bigint)[], deadline?: number) => {
+      setSubmitting(true);
+      try {
+        const d = deadline ?? Math.floor(Date.now() / 1000) + 3600;
+        const res = await writeContract('matchOrdersBatch', [orderId, counterOrderIds, d]);
+        return res;
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [writeContract]
+  );
+
+  return { createOrder, cancelOrder, matchOrders, matchOrdersBatch, approveERC20, isReady, submitting };
 }
 
