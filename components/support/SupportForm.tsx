@@ -3,12 +3,7 @@
 import React, { useState } from 'react';
 import { Mail } from 'lucide-react';
 
-interface SupportFormProps {
-  theme?: 'light' | 'dark';
-}
-
-export default function SupportForm(props?: SupportFormProps) {
-  void props;
+export default function SupportForm() {
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketDesc, setTicketDesc] = useState('');
   const [ticketSubmitted, setTicketSubmitted] = useState(false);

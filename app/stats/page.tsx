@@ -28,16 +28,18 @@ interface StatCard {
 }
 
 export default function StatsPage() {
-  const { readContract, isReady } = useContract();
+  const { readContract, canRead } = useContract();
   const containerRef = useScrollRevealChildren<HTMLDivElement>({ threshold: 0.1 });
 
   const [totalOrders, setTotalOrders] = useState<number | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [protocolFee, setProtocolFee] = useState<number | null>(null);
 
-  // Fetch on-chain stats
+  // Fetch on-chain stats. These are public view calls, so they run as soon as
+  // a contract address resolves (default chain's public RPC, or the
+  // connected wallet's chain) — no wallet connection required.
   useEffect(() => {
-    if (!isReady) return;
+    if (!canRead) return;
     const fetchStats = async () => {
       const [totalResult, pausedResult, feeResult] = await Promise.all([
         readContract('totalOrders'),
@@ -49,7 +51,7 @@ export default function StatsPage() {
       if (feeResult.data !== null) setProtocolFee(Number(feeResult.data));
     };
     fetchStats();
-  }, [isReady, readContract]);
+  }, [canRead, readContract]);
 
   const stats: StatCard[] = useMemo(
     () => [
@@ -59,7 +61,7 @@ export default function StatsPage() {
         icon: BarChart2,
         bgClass: 'bg-[#EFF6FF]',
         textClass: 'text-[#2563EB]',
-        change: isReady ? 'Live from contract' : 'Connect wallet to view',
+        change: canRead ? 'Live from contract' : 'Loading…',
       },
       {
         label: 'Supported Chains',
@@ -82,7 +84,7 @@ export default function StatsPage() {
         icon: Building2,
         bgClass: 'bg-[#FAF5FF]',
         textClass: 'text-[#9333EA]',
-        change: isReady ? 'Configurable by owner' : 'Connect to view',
+        change: canRead ? 'Configurable by owner' : 'Loading…',
       },
       {
         label: 'Exchange Status',
@@ -116,7 +118,7 @@ export default function StatsPage() {
         change: 'Hard-coded cap (500 bps)',
       },
     ],
-    [totalOrders, isPaused, protocolFee, isReady]
+    [totalOrders, isPaused, protocolFee, canRead]
   );
 
   const supportedChains = Object.values(SUPPORTED_CHAINS);
