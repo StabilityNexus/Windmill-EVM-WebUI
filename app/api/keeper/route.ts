@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       let tx;
       try {
         tx = await contract.matchOrders(buyOrderId, sellOrderId, deadline);
-      } catch (estErr) {
+      } catch {
         tx = await contract.matchOrders(buyOrderId, sellOrderId, deadline, { gasLimit: BigInt(800000) });
       }
       const receipt = await tx.wait();
