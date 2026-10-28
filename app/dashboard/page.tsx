@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useWallet } from '@/context/WalletContext';
 import { useContract } from '@/hooks/useContract';
-import { SUPPORTED_TOKENS, getTokenAddress } from '@/lib/contractConfig';
+import { SUPPORTED_TOKENS, getTokenAddress, getExplorerTxUrl } from '@/lib/contractConfig';
 import WalletModal from '@/components/wallet/WalletModal';
-import { Zap, X } from 'lucide-react';
+import { Zap, X, ExternalLink, RefreshCw, AlertCircle, ArrowRightLeft, Layers, CheckCircle2 } from 'lucide-react';
 
 interface Order {
   id: number;
@@ -25,6 +25,18 @@ interface Order {
   active: boolean;
   maker: string;
   onChain: boolean;
+}
+
+interface SettledMatch {
+  id: number;
+  buyOrderId: number;
+  sellOrderId: number;
+  pair: string;
+  amount: string;
+  price: string;
+  age: string;
+  txHash: string;
+  keeper: string;
 }
 
 function parseRay(raw: unknown): number {
@@ -60,16 +72,12 @@ function toRayString(val: number): string {
 function formatPrice(val: number): string {
   if (val === undefined || val === null || isNaN(val)) return '0';
   const rounded = Math.round(val * 1e6) / 1e6;
-  if (Number.isInteger(rounded)) {
-    return rounded.toString();
-  }
   return rounded.toString();
 }
 
-
 export default function DashboardPage() {
   const { isConnected, setWalletModalOpen, fullAddress, chainId, network } = useWallet();
-  const { contractAddress, writeContract, readContract, readERC20, approveERC20, isReady } = useContract();
+  const { contractAddress, rpcUrl, writeContract, readContract, readERC20, approveERC20, fetchEvents, isReady } = useContract();
 
   // ── Form State ────────────────────────────────────────────────────
   const [orderType, setOrderType] = useState<'Buy' | 'Sell'>('Buy');
@@ -84,32 +92,25 @@ export default function DashboardPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txStatus, setTxStatus] = useState<string | null>(null);
 
-  // ── Live ERC-20 Token Balance State ───────────────────────────────
-  const [tokenInBalance, setTokenInBalance] = useState<number | null>(null);
-  const [isFetchingBalance, setIsFetchingBalance] = useState<boolean>(false);
+  // ── Token Balance State ───────────────────────────────────────────
+  const [userTokenBalance, setUserTokenBalance] = useState<string | null>(null);
+
+  // ── Tab State: 'my-orders' | 'all-orders' | 'matches' ─────────────
+  const [activeTab, setActiveTab] = useState<'my-orders' | 'all-orders' | 'matches'>('my-orders');
 
   // ── Orders State ──────────────────────────────────────────────────
   const [orders, setOrders] = useState<Order[]>([]);
-  const activeOrders = useMemo(() => {
-    if (!fullAddress) return [];
-    return orders.filter(
-      (o) => o.active && o.maker && o.maker.toLowerCase() === fullAddress.toLowerCase()
-    );
-  }, [orders, fullAddress]);
-
-  const [settledHistory, setSettledHistory] = useState<Array<{ id: number; pair: string; amount: string; price: string; age: string; txHash: string }>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('windmill_settled_history');
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return [];
-  });
+  const [settledHistory, setSettledHistory] = useState<SettledMatch[]>([]);
+  const [isLoadingOnChain, setIsLoadingOnChain] = useState<boolean>(false);
 
   // ── Stats ─────────────────────────────────────────────────────────
   const [totalOrders, setTotalOrders] = useState<number | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+
+  // ── Auto-Match Engine State ────────────────────────────────────────
+  // Auto-match is permanently and strictly active
+  const [matchingPairKeys, setMatchingPairKeys] = useState<Set<string>>(new Set());
+  const inFlightMatchesRef = useRef<Set<string>>(new Set());
 
   // ── Available tokens for current chain ────────────────────────────
   const availableTokens = useMemo(() => {
@@ -117,6 +118,13 @@ export default function DashboardPage() {
     return SUPPORTED_TOKENS.filter((t) => t.addresses[chainId]);
   }, [chainId]);
 
+  // ── Filtered Orders ───────────────────────────────────────────────
+  const myActiveOrders = useMemo(() => {
+    if (!fullAddress) return [];
+    return orders.filter(
+      (o) => o.active && o.maker && o.maker.toLowerCase() === fullAddress.toLowerCase()
+    );
+  }, [orders, fullAddress]);
   // Handle Token In change with identical token pair collision prevention
   const handleTokenInChange = (newSymbol: string) => {
     setTokenIn(newSymbol);
@@ -183,192 +191,236 @@ export default function DashboardPage() {
   const inactiveOrderIdsRef = useRef<Set<number>>(new Set());
   const simulatedSettledRef = useRef<Array<{ id: number; pair: string; amount: string; price: string; age: string; txHash: string }>>([]);
 
-  // Load persistent simulated & inactive state on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedSim = localStorage.getItem('windmill_simulated_settled');
-        if (savedSim) {
-          simulatedSettledRef.current = JSON.parse(savedSim);
+  const allActiveOrders = useMemo(() => {
+    return orders.filter((o) => o.active);
+  }, [orders]);
+
+  // Detect Matchable Crossover Pairs on-chain
+  const matchablePairs = useMemo(() => {
+    const pairs: Array<{ buy: Order; sell: Order }> = [];
+    const activeBuys = allActiveOrders.filter((o) => o.type === 'Buy');
+    const activeSells = allActiveOrders.filter((o) => o.type === 'Sell');
+
+    for (const buy of activeBuys) {
+      for (const sell of activeSells) {
+        // Matching token pair
+        if (
+          buy.tokenIn.toLowerCase() === sell.tokenOut.toLowerCase() &&
+          buy.tokenOut.toLowerCase() === sell.tokenIn.toLowerCase()
+        ) {
+          // Cannot match self
+          if (buy.maker.toLowerCase() !== sell.maker.toLowerCase()) {
+            if (buy.currentPrice >= sell.currentPrice) {
+              pairs.push({ buy, sell });
+            }
+          }
         }
-        const savedInactive = localStorage.getItem('windmill_inactive_order_ids');
-        if (savedInactive) {
-          const arr = JSON.parse(savedInactive);
-          inactiveOrderIdsRef.current = new Set(arr);
-        }
-      } catch {}
+      }
     }
-  }, []);
+    return pairs;
+  }, [allActiveOrders]);
 
+  // ── User Token Balance Fetcher ────────────────────────────────────
   useEffect(() => {
-    if (!isReady) return;
+    if (!fullAddress || !chainId) {
+      setUserTokenBalance(null);
+      return;
+    }
 
-    const fetchData = async () => {
+    const tokenInAddr = getTokenAddress(tokenIn, chainId);
+    if (!tokenInAddr) {
+      setUserTokenBalance(null);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchBalance = async () => {
       try {
-        const [totalResult, pausedResult, matchedLogs, cancelledLogs, filledLogs] = await Promise.all([
-          readContract('totalOrders'),
-          readContract('paused'),
-          fetchEvents('OrderMatched'),
-          fetchEvents('OrderCancelled'),
-          fetchEvents('OrderFilled'),
-        ]);
-
-        const totalCount = totalResult.data !== null ? Number(totalResult.data) : 0;
-        if (totalResult.data !== null) setTotalOrders(totalCount);
-        if (pausedResult.data !== null) setIsPaused(Boolean(pausedResult.data));
-
-        // Track on-chain deactivated orders
-        if (matchedLogs.data && Array.isArray(matchedLogs.data)) {
-          matchedLogs.data.forEach((log: unknown) => {
-            const l = log as { args?: Record<string, unknown> | unknown[] };
-            const args = l.args || {};
-            const buyId = Number((args as Record<string, unknown>).buyOrderId ?? (args as unknown[])[0] ?? 0);
-            const sellId = Number((args as Record<string, unknown>).sellOrderId ?? (args as unknown[])[1] ?? 0);
-            if (buyId) inactiveOrderIdsRef.current.add(buyId);
-            if (sellId) inactiveOrderIdsRef.current.add(sellId);
-          });
+        const res = await readERC20(tokenInAddr, 'balanceOf', [fullAddress]);
+        if (res.data !== null && res.data !== undefined && isMounted) {
+          const tokenMeta = SUPPORTED_TOKENS.find((t) => t.symbol === tokenIn);
+          const dec = tokenMeta?.decimals || 18;
+          const bal = Number(BigInt(String(res.data))) / 10 ** dec;
+          setUserTokenBalance(bal.toFixed(4));
         }
-
-        if (cancelledLogs.data && Array.isArray(cancelledLogs.data)) {
-          cancelledLogs.data.forEach((log: unknown) => {
-            const l = log as { args?: Record<string, unknown> | unknown[] };
-            const args = l.args || {};
-            const orderId = Number((args as Record<string, unknown>).orderId ?? (args as unknown[])[0] ?? 0);
-            if (orderId) inactiveOrderIdsRef.current.add(orderId);
-          });
-        }
-
-        if (filledLogs.data && Array.isArray(filledLogs.data)) {
-          filledLogs.data.forEach((log: unknown) => {
-            const l = log as { args?: Record<string, unknown> | unknown[] };
-            const args = l.args || {};
-            const orderId = Number((args as Record<string, unknown>).orderId ?? (args as unknown[])[0] ?? 0);
-            if (orderId) inactiveOrderIdsRef.current.add(orderId);
-          });
-        }
-
-        // Build Settled Matches History from OrderMatched logs + simulated settled items
-        const parsedOnChain: Array<{ id: number; pair: string; amount: string; price: string; age: string; txHash: string }> = [];
-        if (matchedLogs.data && Array.isArray(matchedLogs.data)) {
-          matchedLogs.data.forEach((log: unknown) => {
-            const l = log as { args?: Record<string, unknown> | unknown[]; transactionHash?: string };
-            const args = l.args || {};
-            const buyId = Number((args as Record<string, unknown>).buyOrderId ?? (args as unknown[])[0] ?? 0);
-            const sellId = Number((args as Record<string, unknown>).sellOrderId ?? (args as unknown[])[1] ?? 0);
-            const priceRaw = (args as Record<string, unknown>).settlementPrice ?? (args as unknown[])[3] ?? 0;
-            const qtyRaw = (args as Record<string, unknown>).executedQuantity ?? (args as unknown[])[4] ?? 0;
-
-            const priceVal = parseRay(priceRaw);
-            const qtyNum = Number(qtyRaw);
-            const amountFormatted = qtyNum > 1e10 ? (qtyNum / 1e18).toFixed(4) : (qtyNum / 1e6).toFixed(2);
-
-            parsedOnChain.push({
-              id: buyId,
-              pair: `Buy #${buyId} ↔ Sell #${sellId}`,
-              amount: amountFormatted,
-              price: `$${priceVal > 0 ? formatPrice(priceVal) : '3000'}`,
-              age: 'Settled',
-              txHash: l.transactionHash || '',
-            });
-          });
-        }
-
-        const combinedSettled = [...parsedOnChain.reverse()];
-        simulatedSettledRef.current.forEach((sim) => {
-          if (!combinedSettled.some((c) => c.id === sim.id)) {
-            combinedSettled.push(sim);
-          }
-        });
-        if (combinedSettled.length > 0) {
-          setSettledHistory(combinedSettled);
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('windmill_settled_history', JSON.stringify(combinedSettled));
-            } catch {}
-          }
-        }
-
-        // Fetch on-chain order details 1..totalCount and sync UI state
-        if (totalCount > 0) {
-          const orderPromises = [];
-          for (let i = 1; i <= totalCount; i++) {
-            orderPromises.push(readContract('getOrder', [i]));
-          }
-          const orderResults = await Promise.all(orderPromises);
-          const fetchedOrders: Order[] = [];
-
-          orderResults.forEach((res, idx) => {
-            if (!res.data) return;
-            const o = res.data as Record<string, unknown> | unknown[];
-            const id = Number((o as Record<string, unknown>).id ?? (o as unknown[])[0] ?? idx + 1);
-            const rawActive = Boolean((o as Record<string, unknown>).active ?? (o as unknown[])[3]);
-            const remainingInRaw = (o as Record<string, unknown>).remainingIn ?? (o as unknown[])[7] ?? 0;
-            const isBuy = Boolean((o as Record<string, unknown>).isBuy ?? (o as unknown[])[2]);
-
-            const isActive =
-              rawActive &&
-              BigInt(remainingInRaw.toString()) > BigInt(0) &&
-              !inactiveOrderIdsRef.current.has(id);
-
-            const tokenInAddr = String((o as Record<string, unknown>).tokenIn ?? (o as unknown[])[4] ?? '');
-            const tokenOutAddr = String((o as Record<string, unknown>).tokenOut ?? (o as unknown[])[5] ?? '');
-
-            const tokenInMeta = SUPPORTED_TOKENS.find(
-              (t) => chainId && t.addresses[chainId]?.toLowerCase() === tokenInAddr.toLowerCase()
-            );
-            const tokenOutMeta = SUPPORTED_TOKENS.find(
-              (t) => chainId && t.addresses[chainId]?.toLowerCase() === tokenOutAddr.toLowerCase()
-            );
-
-            const decimals = tokenInMeta?.decimals || (isBuy ? 18 : 6);
-            const amountInRaw = (o as Record<string, unknown>).amountIn ?? (o as unknown[])[6] ?? 0;
-            const amt = Number(amountInRaw.toString()) / 10 ** decimals;
-            const startPriceRaw = (o as Record<string, unknown>).startPrice ?? (o as unknown[])[8] ?? 0;
-            const startP = parseRay(startPriceRaw);
-            const slopeRaw = (o as Record<string, unknown>).slope ?? (o as unknown[])[9] ?? 0;
-            const slopeP = parseRay(slopeRaw);
-            const minPriceRaw = (o as Record<string, unknown>).minPrice ?? (o as unknown[])[10] ?? 0;
-            const minP = parseRay(minPriceRaw);
-            const maxPriceRaw = (o as Record<string, unknown>).maxPrice ?? (o as unknown[])[11] ?? 0;
-            const maxP = parseRay(maxPriceRaw);
-            const createdAtRaw = (o as Record<string, unknown>).createdAt ?? (o as unknown[])[12] ?? 0;
-            const expiryRaw = (o as Record<string, unknown>).expiry ?? (o as unknown[])[13] ?? 0;
-            const makerRaw = (o as Record<string, unknown>).maker ?? (o as unknown[])[1] ?? '';
-
-            fetchedOrders.push({
-              id,
-              type: isBuy ? 'Buy' : 'Sell',
-              tokenIn: tokenInAddr,
-              tokenOut: tokenOutAddr,
-              tokenInSymbol: tokenInMeta?.symbol || (isBuy ? 'WETH' : 'USDC'),
-              tokenOutSymbol: tokenOutMeta?.symbol || (isBuy ? 'USDC' : 'WETH'),
-              amount: amt > 0 ? amt : isBuy ? 1 : 3000,
-              startPrice: startP,
-              currentPrice: startP,
-              slope: slopeP,
-              minPrice: minP,
-              maxPrice: maxP,
-              expiry: Number(expiryRaw.toString()),
-              createdAt: Number(createdAtRaw.toString() || Date.now() / 1000) * 1000,
-              active: isActive,
-              maker: String(makerRaw),
-              onChain: true,
-            });
-          });
-
-          setOrders(fetchedOrders);
-        }
-      } catch (err) {
-        console.error('Error fetching on-chain data:', err);
+      } catch {
+        if (isMounted) setUserTokenBalance(null);
       }
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, 2000);
-    return () => clearInterval(interval);
+    fetchBalance();
+    const interval = setInterval(fetchBalance, 6000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [fullAddress, chainId, tokenIn, readERC20]);
+
+  // ── Fetch on-chain data ───────────────────────────────────────────
+  const fetchOnChainData = useCallback(async () => {
+    if (!isReady) return;
+    setIsLoadingOnChain(true);
+
+    try {
+      const [totalResult, pausedResult, matchedLogs, cancelledLogs, filledLogs] = await Promise.all([
+        readContract('totalOrders'),
+        readContract('paused'),
+        fetchEvents('OrderMatched'),
+        fetchEvents('OrderCancelled'),
+        fetchEvents('OrderFilled'),
+      ]);
+
+      const totalCount = totalResult.data !== null ? Number(totalResult.data) : 0;
+      if (totalResult.data !== null) setTotalOrders(totalCount);
+      if (pausedResult.data !== null) setIsPaused(Boolean(pausedResult.data));
+
+      // Track inactive order IDs directly from logs
+      const inactiveIds = new Set<number>();
+
+      if (matchedLogs.data && Array.isArray(matchedLogs.data)) {
+        matchedLogs.data.forEach((log: unknown) => {
+          const l = log as { args?: Record<string, unknown> | unknown[] };
+          const args = l.args || {};
+          const buyId = Number((args as Record<string, unknown>).buyOrderId ?? (args as unknown[])[0] ?? 0);
+          const sellId = Number((args as Record<string, unknown>).sellOrderId ?? (args as unknown[])[1] ?? 0);
+          if (buyId) inactiveIds.add(buyId);
+          if (sellId) inactiveIds.add(sellId);
+        });
+      }
+
+      if (cancelledLogs.data && Array.isArray(cancelledLogs.data)) {
+        cancelledLogs.data.forEach((log: unknown) => {
+          const l = log as { args?: Record<string, unknown> | unknown[] };
+          const args = l.args || {};
+          const orderId = Number((args as Record<string, unknown>).orderId ?? (args as unknown[])[0] ?? 0);
+          if (orderId) inactiveIds.add(orderId);
+        });
+      }
+
+      if (filledLogs.data && Array.isArray(filledLogs.data)) {
+        filledLogs.data.forEach((log: unknown) => {
+          const l = log as { args?: Record<string, unknown> | unknown[] };
+          const args = l.args || {};
+          const orderId = Number((args as Record<string, unknown>).orderId ?? (args as unknown[])[0] ?? 0);
+          if (orderId) inactiveIds.add(orderId);
+        });
+      }
+
+      // Build Settled Matches History purely from real on-chain OrderMatched events
+      const parsedMatches: SettledMatch[] = [];
+      if (matchedLogs.data && Array.isArray(matchedLogs.data)) {
+        matchedLogs.data.forEach((log: unknown) => {
+          const l = log as { args?: Record<string, unknown> | unknown[]; transactionHash?: string };
+          const args = l.args || {};
+          const buyId = Number((args as Record<string, unknown>).buyOrderId ?? (args as unknown[])[0] ?? 0);
+          const sellId = Number((args as Record<string, unknown>).sellOrderId ?? (args as unknown[])[1] ?? 0);
+          const keeper = String((args as Record<string, unknown>).keeper ?? (args as unknown[])[2] ?? '');
+          const priceRaw = (args as Record<string, unknown>).settlementPrice ?? (args as unknown[])[3] ?? 0;
+          const qtyRaw = (args as Record<string, unknown>).executedQuantity ?? (args as unknown[])[4] ?? 0;
+
+          const priceVal = parseRay(priceRaw);
+          const qtyNum = Number(qtyRaw);
+          const amountFormatted = qtyNum > 1e10 ? (qtyNum / 1e18).toFixed(4) : (qtyNum / 1e6).toFixed(2);
+
+          parsedMatches.push({
+            id: buyId,
+            buyOrderId: buyId,
+            sellOrderId: sellId,
+            pair: `Buy #${buyId} ↔ Sell #${sellId}`,
+            amount: amountFormatted,
+            price: `$${priceVal > 0 ? formatPrice(priceVal) : '3000'}`,
+            age: 'On-Chain Settled',
+            txHash: l.transactionHash || '',
+            keeper: keeper ? `${keeper.slice(0, 6)}...${keeper.slice(-4)}` : 'Keeper',
+          });
+        });
+      }
+      setSettledHistory(parsedMatches.reverse());
+
+      // Fetch on-chain orders 1..totalCount
+      if (totalCount > 0) {
+        const orderPromises = [];
+        for (let i = 1; i <= totalCount; i++) {
+          orderPromises.push(readContract('getOrder', [i]));
+        }
+        const orderResults = await Promise.all(orderPromises);
+        const fetchedOrders: Order[] = [];
+
+        orderResults.forEach((res, idx) => {
+          if (!res.data) return;
+          const o = res.data as Record<string, unknown> | unknown[];
+          const id = Number((o as Record<string, unknown>).id ?? (o as unknown[])[0] ?? idx + 1);
+          const rawActive = Boolean((o as Record<string, unknown>).active ?? (o as unknown[])[3]);
+          const remainingInRaw = (o as Record<string, unknown>).remainingIn ?? (o as unknown[])[7] ?? 0;
+          const isBuy = Boolean((o as Record<string, unknown>).isBuy ?? (o as unknown[])[2]);
+
+          const isActive =
+            rawActive &&
+            BigInt(remainingInRaw.toString()) > BigInt(0) &&
+            !inactiveIds.has(id);
+
+          const tokenInAddr = String((o as Record<string, unknown>).tokenIn ?? (o as unknown[])[4] ?? '');
+          const tokenOutAddr = String((o as Record<string, unknown>).tokenOut ?? (o as unknown[])[5] ?? '');
+
+          const tokenInMeta = SUPPORTED_TOKENS.find(
+            (t) => chainId && t.addresses[chainId]?.toLowerCase() === tokenInAddr.toLowerCase()
+          );
+          const tokenOutMeta = SUPPORTED_TOKENS.find(
+            (t) => chainId && t.addresses[chainId]?.toLowerCase() === tokenOutAddr.toLowerCase()
+          );
+
+          const decimals = tokenInMeta?.decimals || (isBuy ? 18 : 6);
+          const amountInRaw = (o as Record<string, unknown>).amountIn ?? (o as unknown[])[6] ?? 0;
+          const amt = Number(amountInRaw.toString()) / 10 ** decimals;
+          const startPriceRaw = (o as Record<string, unknown>).startPrice ?? (o as unknown[])[8] ?? 0;
+          const startP = parseRay(startPriceRaw);
+          const slopeRaw = (o as Record<string, unknown>).slope ?? (o as unknown[])[9] ?? 0;
+          const slopeP = parseRay(slopeRaw);
+          const minPriceRaw = (o as Record<string, unknown>).minPrice ?? (o as unknown[])[10] ?? 0;
+          const minP = parseRay(minPriceRaw);
+          const maxPriceRaw = (o as Record<string, unknown>).maxPrice ?? (o as unknown[])[11] ?? 0;
+          const maxP = parseRay(maxPriceRaw);
+          const createdAtRaw = (o as Record<string, unknown>).createdAt ?? (o as unknown[])[12] ?? 0;
+          const expiryRaw = (o as Record<string, unknown>).expiry ?? (o as unknown[])[13] ?? 0;
+          const makerRaw = (o as Record<string, unknown>).maker ?? (o as unknown[])[1] ?? '';
+
+          fetchedOrders.push({
+            id,
+            type: isBuy ? 'Buy' : 'Sell',
+            tokenIn: tokenInAddr,
+            tokenOut: tokenOutAddr,
+            tokenInSymbol: tokenInMeta?.symbol || (isBuy ? 'WETH' : 'USDC'),
+            tokenOutSymbol: tokenOutMeta?.symbol || (isBuy ? 'USDC' : 'WETH'),
+            amount: amt > 0 ? amt : isBuy ? 1 : 3000,
+            startPrice: startP,
+            currentPrice: startP,
+            slope: slopeP,
+            minPrice: minP,
+            maxPrice: maxP,
+            expiry: Number(expiryRaw.toString()),
+            createdAt: Number(createdAtRaw.toString() || Date.now() / 1000) * 1000,
+            active: isActive,
+            maker: String(makerRaw),
+            onChain: true,
+          });
+        });
+
+        setOrders(fetchedOrders);
+      }
+    } catch (err) {
+      console.error('Error fetching on-chain data:', err);
+    } finally {
+      setIsLoadingOnChain(false);
+    }
   }, [isReady, readContract, fetchEvents, chainId]);
 
-  // ── Dynamic price calculation loop for deployed orders ────────────
+  useEffect(() => {
+    fetchOnChainData();
+    const interval = setInterval(fetchOnChainData, 4000);
+    return () => clearInterval(interval);
+  }, [fetchOnChainData]);
+
+  // ── Dynamic price calculation loop based on curve formula ─────────
   useEffect(() => {
     const timer = setInterval(() => {
       setOrders((prevOrders) =>
@@ -382,7 +434,6 @@ export default function DashboardPage() {
           }
           const deltaT = (Date.now() - ord.createdAt) / 1000;
           let calculated = ord.startPrice + ord.slope * deltaT;
-          // Clamp to min/max bounds
           if (ord.minPrice > 0) calculated = Math.max(ord.minPrice, calculated);
           if (ord.maxPrice > 0) calculated = Math.min(ord.maxPrice, calculated);
           const currentPrice = Math.max(0.01, Math.round(calculated * 1e4) / 1e4);
@@ -392,9 +443,7 @@ export default function DashboardPage() {
       );
     }, 1000);
 
-    return () => {
-      clearInterval(timer);
-    };
+    return () => clearInterval(timer);
   }, []);
 
   // ── Create Order Handler ──────────────────────────────────────────
@@ -422,7 +471,6 @@ export default function DashboardPage() {
 
       if (tokenInAddr && tokenOutAddr) {
         try {
-          // Get token decimals
           const tokenMeta = SUPPORTED_TOKENS.find((t) => t.symbol === tokenIn);
           const decimals = tokenMeta?.decimals || 18;
           const amountWei = BigInt(Math.floor(amount * 10 ** decimals)).toString();
@@ -446,26 +494,28 @@ export default function DashboardPage() {
           const maxPriceRay = maxPrice > 0 ? toRayString(maxPrice) : '0';
           const expiryTs = expiry ? Math.floor(new Date(expiry).getTime() / 1000).toString() : '0';
 
-          // Check and request ERC-20 approval
-          setTxStatus('Checking token approval...');
+          // Check token allowance
+          setTxStatus('Verifying token allowance...');
           const allowanceResult = await readERC20(tokenInAddr, 'allowance', [fullAddress, contractAddress]);
-          const currentAllowance = allowanceResult.data ? BigInt(allowanceResult.data as string) : BigInt(0);
+          const currentAllowance =
+            allowanceResult.data !== null && allowanceResult.data !== undefined
+              ? BigInt(String(allowanceResult.data))
+              : BigInt(0);
 
           if (currentAllowance < BigInt(amountWei)) {
-            setTxStatus('Requesting token approval...');
+            setTxStatus('Requesting ERC-20 approval...');
             const maxApproval = '0x' + 'f'.repeat(64);
             const approveResult = await approveERC20(tokenInAddr, contractAddress!, maxApproval);
             if (approveResult.error) {
-              setTxStatus(`Approval failed: ${approveResult.error}`);
+              setTxStatus(`Approval error: ${approveResult.error}`);
               setIsSubmitting(false);
               return;
             }
-            setTxStatus('Approval submitted. Waiting for confirmation...');
-            // Brief wait for approval confirmation
-            await new Promise((r) => setTimeout(r, 3000));
+            setTxStatus('Approval confirmed. Submitting order...');
+            await new Promise((r) => setTimeout(r, 2000));
           }
 
-          setTxStatus('Submitting order transaction...');
+          setTxStatus('Submitting order to Windmill Exchange contract...');
           const { txHash, error } = await writeContract('createOrder', [
             tokenInAddr,
             tokenOutAddr,
@@ -479,118 +529,147 @@ export default function DashboardPage() {
           ]);
 
           if (error) {
-            setTxStatus(`Transaction failed: ${error}`);
+            setTxStatus(`Transaction error: ${error}`);
             setIsSubmitting(false);
             return;
           }
 
-          setTxStatus(`Order submitted! Tx: ${txHash?.slice(0, 10)}...`);
-
+          setTxStatus(`Order deployed on-chain! Tx: ${txHash?.slice(0, 10)}...`);
           setIsSubmitting(false);
           setAmount(1);
+          fetchOnChainData();
+          setTimeout(() => setTxStatus(null), 6000);
           fetchTokenInBalance();
           setTimeout(() => setTxStatus(null), 5000);
           return;
         } catch (err) {
-          console.error('On-chain order creation failed:', err);
-          setTxStatus(`On-chain transaction failed: ${(err as Error).message}`);
+          setTxStatus(`Order deployment failed: ${(err as Error).message}`);
           setIsSubmitting(false);
           return;
         }
       }
     }
 
-    setTxStatus('Smart contract address or provider not connected on this chain. Please connect wallet to active EVM network.');
+    setTxStatus('Contract address not found for connected chain. Please select a supported EVM network.');
     setIsSubmitting(false);
   };
 
   // ── Cancel Order Handler ──────────────────────────────────────────
   const handleCancelOrder = useCallback(
     async (orderId: number) => {
-      inactiveOrderIdsRef.current.add(orderId);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('windmill_inactive_order_ids', JSON.stringify(Array.from(inactiveOrderIdsRef.current)));
-        } catch {}
+      if (!isReady) return;
+      setTxStatus(`Cancelling Order #${orderId} on-chain...`);
+      const { txHash, error } = await writeContract('cancelOrder', [orderId]);
+      if (error) {
+        setTxStatus(`Cancel failed: ${error}`);
+      } else {
+        setTxStatus(`Order #${orderId} cancelled. Tx: ${txHash?.slice(0, 10)}...`);
+        fetchOnChainData();
       }
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, active: false } : o)));
-
-      const order = orders.find((o) => o.id === orderId);
-      if (order && order.onChain && isReady) {
-        const { error } = await writeContract('cancelOrder', [orderId]);
-        if (error) {
-          setTxStatus(`Cancel failed: ${error}`);
-          return;
-        }
-        setTxStatus(`Order #${orderId} cancelled on-chain`);
-      }
-
-      setTimeout(() => setTxStatus(null), 3000);
+      setTimeout(() => setTxStatus(null), 5000);
     },
-    [orders, isReady, writeContract]
+    [isReady, writeContract, fetchOnChainData]
   );
 
-  // ── Simulate Sweep Handler ────────────────────────────────────────
-  const handleSimulateSweep = useCallback(
-    (orderId: number) => {
-      inactiveOrderIdsRef.current.add(orderId);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('windmill_inactive_order_ids', JSON.stringify(Array.from(inactiveOrderIdsRef.current)));
-        } catch {}
+  // ── Clean up inactive orders from in-flight matching ref ──────────
+  useEffect(() => {
+    const activeIds = new Set(orders.filter((o) => o.active).map((o) => o.id));
+    for (const key of Array.from(inFlightMatchesRef.current)) {
+      const [bId, sId] = key.split('-').map(Number);
+      if (!activeIds.has(bId) || !activeIds.has(sId)) {
+        inFlightMatchesRef.current.delete(key);
       }
+    }
+  }, [orders]);
 
-      setOrders((prev) =>
-        prev.map((ord) => {
-          if (ord.id === orderId) return { ...ord, active: false };
-          return ord;
-        })
-      );
+  // ── Real On-Chain Match Orders Handler ─────────────────────────────
+  const handleExecuteMatch = useCallback(
+    async (buyOrderId: number, sellOrderId: number) => {
+      const pairKey = `${buyOrderId}-${sellOrderId}`;
+      if (inFlightMatchesRef.current.has(pairKey)) return;
 
-      const matched = orders.find((o) => o.id === orderId);
-      if (matched) {
-        const newItem = {
-          id: matched.id,
-          pair: `${matched.tokenInSymbol}/${matched.tokenOutSymbol}`,
-          amount: matched.amount.toString(),
-          price: `$${formatPrice(matched.currentPrice)}`,
-          age: 'Just now',
-          txHash: '',
-        };
+      inFlightMatchesRef.current.add(pairKey);
+      setMatchingPairKeys((prev) => new Set(prev).add(pairKey));
+      setIsSubmitting(true);
+      setTxStatus(`Strict auto-match executing: Buy #${buyOrderId} ↔ Sell #${sellOrderId}...`);
 
-        if (!simulatedSettledRef.current.some((s) => s.id === matched.id)) {
-          simulatedSettledRef.current = [newItem, ...simulatedSettledRef.current];
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('windmill_simulated_settled', JSON.stringify(simulatedSettledRef.current));
-            } catch {}
+      try {
+        let matchedSuccess = false;
+
+        // 1. Attempt autonomous keeper backend settlement
+        try {
+          const res = await fetch('/api/keeper', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'match',
+              buyOrderId,
+              sellOrderId,
+              contractAddress,
+              rpcUrl,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.ok) {
+            matchedSuccess = true;
+            setTxStatus(`Orders matched automatically on-chain! Tx: ${data.txHash?.slice(0, 10)}...`);
+            await fetchOnChainData();
           }
+        } catch (backendErr) {
+          console.warn('Keeper API auto-match attempt failed, falling back to wallet:', backendErr);
         }
 
-        setSettledHistory((prev) => {
-          const updated = [
-            newItem,
-            ...prev.filter((item) => item.id !== matched.id || item.txHash !== ''),
-          ];
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('windmill_settled_history', JSON.stringify(updated));
-            } catch {}
+        // 2. If backend settlement didn't execute and user wallet is connected, fallback to wallet contract call
+        if (!matchedSuccess && isConnected && isReady) {
+          try {
+            const deadline = Math.floor(Date.now() / 1000) + 3600;
+            const { txHash, error } = await writeContract('matchOrders', [buyOrderId, sellOrderId, deadline]);
+
+            if (error) {
+              setTxStatus(`Match transaction error: ${error}`);
+            } else {
+              matchedSuccess = true;
+              setTxStatus(`Orders matched on-chain! Tx: ${txHash?.slice(0, 10)}... (0.1% keeper fee earned)`);
+              await fetchOnChainData();
+            }
+          } catch (walletErr) {
+            setTxStatus(`Match execution failed: ${(walletErr as Error).message}`);
           }
-          return updated;
+        }
+      } finally {
+        setIsSubmitting(false);
+        setMatchingPairKeys((prev) => {
+          const next = new Set(prev);
+          next.delete(pairKey);
+          return next;
         });
+        setTimeout(() => setTxStatus(null), 6000);
       }
     },
-    [orders]
+    [contractAddress, rpcUrl, isConnected, isReady, writeContract, fetchOnChainData]
   );
 
-  // ── Price curve SVG renderer ──────────────────────────────────────
+  // ── Automatic Matching Loop for Crossing Opportunities (Strictly Autonomous) ──
+  useEffect(() => {
+    if (isPaused || isSubmitting) return;
+    if (matchablePairs.length === 0) return;
+
+    for (const { buy, sell } of matchablePairs) {
+      const pairKey = `${buy.id}-${sell.id}`;
+      if (!inFlightMatchesRef.current.has(pairKey)) {
+        handleExecuteMatch(buy.id, sell.id);
+        break; // Match one pair at a time to prevent nonce collisions
+      }
+    }
+  }, [matchablePairs, isPaused, isSubmitting, handleExecuteMatch]);
+
+  // ── Price Curve SVG Mini-renderer ─────────────────────────────────
   const renderPriceCurve = (order: Order) => {
     const points: string[] = [];
     const width = 120;
-    const height = 40;
-    const steps = 20;
-    const timeSpanSec = 300; // 5 minutes of curve
+    const height = 36;
+    const steps = 16;
+    const timeSpanSec = 300;
 
     let minP = Infinity,
       maxP = -Infinity;
@@ -614,11 +693,11 @@ export default function DashboardPage() {
     }
 
     return (
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-10" preserveAspectRatio="none">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-8" preserveAspectRatio="none">
         <polyline
           points={points.join(' ')}
           fill="none"
-          stroke={order.type === 'Buy' ? '#10b981' : '#f59e0b'}
+          stroke={order.type === 'Buy' ? '#10b981' : '#3b82f6'}
           strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -631,55 +710,70 @@ export default function DashboardPage() {
     <main className="w-full min-h-screen bg-background text-foreground pt-24 transition-colors duration-300">
       <WalletModal />
 
-      <div className="max-w-6xl mx-auto px-6 py-12 flex flex-col gap-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 flex flex-col gap-8">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <span className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">EVM Order Matcher</span>
-            <h1 className="text-3xl font-extrabold tracking-tight text-black dark:text-white mt-1">Exchange Dashboard</h1>
+            <span className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+              On-Chain Matchmaking Engine
+            </span>
+            <h1 className="text-3xl font-extrabold tracking-tight text-black dark:text-white mt-1">
+              Exchange Dashboard
+            </h1>
           </div>
           <div className="flex items-center gap-3 text-xs flex-wrap">
-            {/* Contract status badges */}
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 font-semibold">
-              <span className={`h-1.5 w-1.5 rounded-full ${isReady ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-              {isReady ? 'Contract Connected' : 'Demo Mode'}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 font-semibold shadow-xs">
+              <span className={`h-1.5 w-1.5 rounded-full ${isReady ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
+              {isReady ? 'Contract Connected' : 'Wallet Disconnected'}
             </span>
             {chainId && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 font-semibold">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 font-semibold">
                 {network}
               </span>
             )}
             {totalOrders !== null && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 font-semibold">
-                {totalOrders} orders
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 font-semibold">
+                {totalOrders} Total Orders
               </span>
             )}
             {isPaused && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-950/50 border border-red-100 dark:border-red-900/60 text-red-600 dark:text-red-400 font-bold">
-                ⚠ Exchange Paused
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 font-bold">
+                ⚠ Protocol Paused
               </span>
             )}
+            <button
+              type="button"
+              onClick={fetchOnChainData}
+              disabled={isLoadingOnChain}
+              className="p-1.5 rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              title="Refresh contract data"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoadingOnChain ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         </div>
 
-        {/* Transaction status bar */}
+        {/* Transaction status alert */}
         {txStatus && (
-          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-900/80 p-4 text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-2 animate-fade-in">
-            <span className="h-2 w-2 rounded-full bg-black dark:bg-white animate-pulse" />
-            {txStatus}
+          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md p-4 text-xs font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-2 shadow-lg animate-fade-in">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>{txStatus}</span>
           </div>
         )}
 
         {!isConnected && (
-          <div className="rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 p-6 text-center flex flex-col items-center gap-3">
-            <span className="text-2xl">🔌</span>
-            <h2 className="text-base font-bold text-black dark:text-white">Wallet Connection Required</h2>
+          <div className="rounded-3xl border border-dashed border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 p-8 text-center flex flex-col items-center gap-3">
+            <div className="h-12 w-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-xl">
+              🔌
+            </div>
+            <h2 className="text-base font-bold text-black dark:text-white">Connect Wallet to Trade</h2>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm">
-              Connect your wallet to start deploying dynamic order curves on-chain.
+              Connect your EVM wallet to place dynamic curve orders, cancel active orders, and execute settlements on-chain.
             </p>
             <button
+              type="button"
               onClick={() => setWalletModalOpen(true)}
-              className="mt-2 rounded-full bg-black dark:bg-white px-6 py-2 text-xs font-bold text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors shadow-xs cursor-pointer"
+              className="mt-2 rounded-full bg-black dark:bg-white px-6 py-2.5 text-xs font-bold text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-all shadow-sm cursor-pointer"
             >
               Connect Wallet
             </button>
@@ -689,8 +783,8 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Left Column: Create Order Form */}
           <div
-            className={`lg:col-span-1 border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 bg-white dark:bg-neutral-900 shadow-xs transition-opacity duration-300 ${
-              !isConnected ? 'opacity-50 pointer-events-none' : ''
+            className={`lg:col-span-1 border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 bg-white dark:bg-neutral-900 shadow-sm transition-opacity duration-300 ${
+              !isConnected ? 'opacity-60 pointer-events-none' : ''
             }`}
           >
             <h2 className="text-lg font-bold text-black dark:text-white mb-4">Deploy Curve Order</h2>
@@ -702,21 +796,31 @@ export default function DashboardPage() {
               <div className="flex gap-2 bg-neutral-50 dark:bg-neutral-800 p-1 rounded-full border border-neutral-100 dark:border-neutral-700">
                 <button
                   type="button"
-                  onClick={() => setOrderType('Buy')}
+                  onClick={() => {
+                    setOrderType('Buy');
+                    if (slope > 0) setSlope(-Math.abs(slope));
+                  }}
                   className={`flex-1 py-2 text-center rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                    orderType === 'Buy' ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs' : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+                    orderType === 'Buy'
+                      ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                      : 'text-neutral-500 hover:text-black dark:hover:text-white'
                   }`}
                 >
-                  Buy Order
+                  Buy Order (s &lt; 0)
                 </button>
                 <button
                   type="button"
-                  onClick={() => setOrderType('Sell')}
+                  onClick={() => {
+                    setOrderType('Sell');
+                    if (slope < 0) setSlope(Math.abs(slope));
+                  }}
                   className={`flex-1 py-2 text-center rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                    orderType === 'Sell' ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs' : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+                    orderType === 'Sell'
+                      ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                      : 'text-neutral-500 hover:text-black dark:hover:text-white'
                   }`}
                 >
-                  Sell Order
+                  Sell Order (s &gt; 0)
                 </button>
               </div>
 
@@ -729,6 +833,8 @@ export default function DashboardPage() {
                   <select
                     id="token-in-select"
                     value={tokenIn}
+                    onChange={(e) => setTokenIn(e.target.value)}
+                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                     onChange={(e) => handleTokenInChange(e.target.value)}
                     className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
                   >
@@ -746,6 +852,8 @@ export default function DashboardPage() {
                   <select
                     id="token-out-select"
                     value={tokenOut}
+                    onChange={(e) => setTokenOut(e.target.value)}
+                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                     onChange={(e) => handleTokenOutChange(e.target.value)}
                     className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
                   >
@@ -758,6 +866,21 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              {/* Amount with User Token Balance */}
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center text-[9px] text-neutral-400 dark:text-neutral-500">
+                  <label htmlFor="amount-input">Amount</label>
+                  {userTokenBalance !== null && (
+                    <span className="font-mono flex items-center gap-1">
+                      Bal: <span className="text-black dark:text-white font-bold">{userTokenBalance}</span> {tokenIn}
+                      <button
+                        type="button"
+                        onClick={() => setAmount(Number(userTokenBalance))}
+                        className="px-1 py-0.2 rounded bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white text-[8px] font-bold"
+                      >
+                        MAX
+                      </button>
+                    </span>
               {/* Amount with Live Balance & [MAX] Fill */}
               <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between">
@@ -792,9 +915,11 @@ export default function DashboardPage() {
                   id="amount-input"
                   type="number"
                   step="0.000001"
+                  min="0.000001"
                   required
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
+                  className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                   className={`border bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden transition-colors ${
                     isConnected && tokenInBalance !== null && amount > tokenInBalance
                       ? 'border-red-500 dark:border-red-500 focus:border-red-500'
@@ -812,16 +937,17 @@ export default function DashboardPage() {
               {/* Starting Price */}
               <div className="flex flex-col gap-1">
                 <label htmlFor="start-price-input" className="text-[9px] text-neutral-400 dark:text-neutral-500">
-                  Start Price (RAY-scaled internally)
+                  Starting Price ($)
                 </label>
                 <input
                   id="start-price-input"
                   type="number"
                   step="0.01"
+                  min="0.01"
                   required
                   value={startPrice}
                   onChange={(e) => setStartPrice(Number(e.target.value))}
-                  className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
+                  className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                   placeholder="3000"
                 />
               </div>
@@ -829,7 +955,7 @@ export default function DashboardPage() {
               {/* Price Slope */}
               <div className="flex flex-col gap-1">
                 <label htmlFor="slope-input" className="text-[9px] text-neutral-400 dark:text-neutral-500">
-                  Slope (per second)
+                  Slope ($ / second)
                 </label>
                 <input
                   id="slope-input"
@@ -838,11 +964,11 @@ export default function DashboardPage() {
                   required
                   value={slope}
                   onChange={(e) => setSlope(Number(e.target.value))}
-                  className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
+                  className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                   placeholder="-0.2"
                 />
                 <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-normal normal-case mt-0.5">
-                  Negative for Buys (decreasing), positive for Sells (increasing).
+                  Negative for Buys (descending bid), positive for Sells (increasing ask).
                 </span>
               </div>
 
@@ -858,7 +984,7 @@ export default function DashboardPage() {
                     step="0.01"
                     value={minPrice}
                     onChange={(e) => setMinPrice(Number(e.target.value))}
-                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
+                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                     placeholder="0"
                   />
                 </div>
@@ -872,7 +998,7 @@ export default function DashboardPage() {
                     step="0.01"
                     value={maxPrice}
                     onChange={(e) => setMaxPrice(Number(e.target.value))}
-                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
+                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                     placeholder="0"
                   />
                 </div>
@@ -881,19 +1007,23 @@ export default function DashboardPage() {
               {/* Expiry */}
               <div className="flex flex-col gap-1">
                 <label htmlFor="expiry-input" className="text-[9px] text-neutral-400 dark:text-neutral-500">
-                  Expiry (optional)
+                  Expiry (Optional)
                 </label>
                 <input
                   id="expiry-input"
                   type="datetime-local"
                   value={expiry}
                   onChange={(e) => setExpiry(e.target.value)}
-                  className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
+                  className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                 />
               </div>
 
               <button
                 type="submit"
+                disabled={isSubmitting || isPaused || !isConnected}
+                className="mt-2 w-full rounded-full bg-black dark:bg-white py-3 text-center text-xs font-bold text-white dark:text-black uppercase hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+              >
+                {isSubmitting ? 'Deploying Order...' : isPaused ? 'Exchange Paused' : 'Deploy Curve Order'}
                 disabled={
                   isSubmitting ||
                   isPaused ||
@@ -915,66 +1045,170 @@ export default function DashboardPage() {
             </form>
           </div>
 
-          {/* Right Column: Active Orders & History */}
-          <div className="lg:col-span-2 flex flex-col gap-8 w-full">
-            {/* Active Orders Section */}
-            <div className="border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 bg-white dark:bg-neutral-900 shadow-xs w-full">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-black dark:text-white">Your Dynamic Orders</h2>
+          {/* Right Column: Dynamic Order Book & Real Settlement Logs */}
+          <div className="lg:col-span-2 flex flex-col gap-6 w-full">
+            {/* Match Opportunities Alert Card (Strict Autonomous Execution) */}
+            {matchablePairs.length > 0 && (
+              <div className="border border-emerald-500/30 rounded-3xl p-6 bg-emerald-50/40 dark:bg-emerald-950/30 backdrop-blur-md shadow-lg">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-emerald-600 dark:text-emerald-400 fill-current animate-pulse" />
+                    <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
+                      Crossing Match Opportunity Detected ({matchablePairs.length}) — Strictly Auto-Executing
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2 bg-emerald-500/10 dark:bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/30">
+                      <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-200">
+                        ⚡ Auto-Match: STRICTLY ACTIVE
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                      0.1% Keeper Fee
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {matchablePairs.slice(0, 5).map(({ buy, sell }) => {
+                    const pairKey = `${buy.id}-${sell.id}`;
+                    const isMatchingThis = matchingPairKeys.has(pairKey);
+
+                    return (
+                      <div
+                        key={`match-${buy.id}-${sell.id}`}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-2xl bg-white/80 dark:bg-neutral-900/80 border border-emerald-500/20"
+                      >
+                        <div className="text-xs">
+                          <span className="font-bold text-black dark:text-white">Buy #{buy.id}</span> (${formatPrice(buy.currentPrice)})
+                          <span className="text-neutral-400 mx-2">↔</span>
+                          <span className="font-bold text-black dark:text-white">Sell #{sell.id}</span> (${formatPrice(sell.currentPrice)})
+                          <div className="text-[10px] text-neutral-500 mt-0.5 flex items-center gap-1.5">
+                            <span>Cross condition satisfied: Buy Price &ge; Sell Price</span>
+                            <span className="inline-flex items-center text-emerald-600 dark:text-emerald-400 font-semibold">
+                              • Auto-executing match strictly on-chain
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isMatchingThis ? (
+                            <span className="px-4 py-2 rounded-full bg-emerald-600/20 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center gap-1.5">
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              Executing Match On-Chain...
+                            </span>
+                          ) : (
+                            <span className="px-4 py-2 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center gap-1.5">
+                              <Zap className="w-3.5 h-3.5 fill-current animate-pulse" />
+                              Auto-Match In Progress
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Active Orders Section with Tabs */}
+            <div className="border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 bg-white dark:bg-neutral-900 shadow-sm w-full">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                {/* Tabs */}
+                <div className="flex gap-2 bg-neutral-50 dark:bg-neutral-800 p-1 rounded-full border border-neutral-200 dark:border-neutral-700 w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('my-orders')}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'my-orders'
+                        ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                        : 'text-neutral-500 hover:text-black dark:hover:text-white'
+                    }`}
+                  >
+                    My Active Orders ({myActiveOrders.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('all-orders')}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'all-orders'
+                        ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                        : 'text-neutral-500 hover:text-black dark:hover:text-white'
+                    }`}
+                  >
+                    Public Order Book ({allActiveOrders.length})
+                  </button>
+                </div>
+
                 <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-                  {activeOrders.length} Active
+                  Live Contract State
                 </span>
               </div>
+
+              {/* Order Cards List */}
               <div className="flex flex-col gap-4">
-                {activeOrders.length === 0 ? (
-                  <p className="text-neutral-400 dark:text-neutral-500 text-xs py-6 text-center">No active dynamic orders deployed.</p>
+                {(activeTab === 'my-orders' ? myActiveOrders : allActiveOrders).length === 0 ? (
+                  <div className="py-12 text-center flex flex-col items-center gap-2">
+                    <Layers className="w-8 h-8 text-neutral-300 dark:text-neutral-700" />
+                    <p className="text-neutral-500 dark:text-neutral-400 text-xs font-medium">
+                      {activeTab === 'my-orders'
+                        ? 'You have no active dynamic orders deployed on this contract.'
+                        : 'No active orders registered in the on-chain orderbook yet.'}
+                    </p>
+                    <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+                      Use the deployment form on the left to place your first dynamic order.
+                    </p>
+                  </div>
                 ) : (
-                  activeOrders.map((order) => (
+                  (activeTab === 'my-orders' ? myActiveOrders : allActiveOrders).map((order) => (
                     <div
                       key={order.id}
-                      className="border border-neutral-100 dark:border-neutral-800 bg-neutral-50/30 dark:bg-neutral-800/40 rounded-2xl p-4 flex flex-col gap-4"
+                      className="border border-neutral-100 dark:border-neutral-800 bg-neutral-50/40 dark:bg-neutral-800/40 rounded-2xl p-4 flex flex-col gap-3 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors"
                     >
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex flex-col gap-1 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500">#{order.id}</span>
+                            <span className="text-[10px] font-mono font-bold text-neutral-400 dark:text-neutral-500">
+                              #{order.id}
+                            </span>
                             <span
-                              className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                                order.type === 'Buy' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400'
+                              className={`text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase ${
+                                order.type === 'Buy'
+                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
+                                  : 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400'
                               }`}
                             >
                               {order.type}
                             </span>
-                            {order.onChain && (
-                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 font-bold">
-                                On-Chain
-                              </span>
-                            )}
+                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-mono">
+                              Maker: {order.maker.slice(0, 6)}...{order.maker.slice(-4)}
+                            </span>
                             <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                              {order.amount} {order.tokenInSymbol || order.tokenIn} ➔ {order.tokenOutSymbol || order.tokenOut}
+                              {order.amount} {order.tokenInSymbol} ➔ {order.tokenOutSymbol}
                             </span>
                           </div>
+
                           <div className="flex flex-col gap-0.5 text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 flex-wrap">
                               <span>
                                 Start: <span className="font-semibold text-black dark:text-white">${formatPrice(order.startPrice)}</span>
                               </span>
                               <span>
                                 Slope:{' '}
-                                <span className="font-semibold text-black dark:text-white">
-                                  {order.slope > 0 ? `+${formatPrice(order.slope)}` : formatPrice(order.slope)} /s
+                                <span className="font-semibold text-black dark:text-white font-mono">
+                                  {order.slope > 0 ? `+${formatPrice(order.slope)}` : formatPrice(order.slope)}/s
                                 </span>
                               </span>
+                              {(order.minPrice > 0 || order.maxPrice > 0) && (
+                                <>
+                                  {order.minPrice > 0 && <span>Min: ${formatPrice(order.minPrice)}</span>}
+                                  {order.maxPrice > 0 && <span>Max: ${formatPrice(order.maxPrice)}</span>}
+                                </>
+                              )}
                             </div>
-                            {(order.minPrice > 0 || order.maxPrice > 0) && (
-                              <div className="flex items-center gap-4">
-                                {order.minPrice > 0 && <span>Min: ${formatPrice(order.minPrice)}</span>}
-                                {order.maxPrice > 0 && <span>Max: ${formatPrice(order.maxPrice)}</span>}
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1.5 mt-1 font-semibold text-black dark:text-white">
-                              Current Price:
-                              <span className="text-black dark:text-white font-mono font-bold animate-pulse text-sm">
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className="text-neutral-500 dark:text-neutral-400">Current Computed Price:</span>
+                              <span className="text-black dark:text-white font-mono font-bold text-sm bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">
                                 ${formatPrice(order.currentPrice)}
                               </span>
                             </div>
@@ -983,29 +1217,25 @@ export default function DashboardPage() {
 
                         {/* Action buttons */}
                         <div className="flex gap-2 shrink-0">
-                          <button
-                            onClick={() => handleCancelOrder(order.id)}
-                            disabled={!isConnected}
-                            className="rounded-full border border-red-200 dark:border-red-800/80 bg-white dark:bg-neutral-800 px-4 py-2 text-[10px] font-bold text-red-600 dark:text-red-400 hover:border-red-400 dark:hover:border-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors shrink-0 disabled:opacity-40 cursor-pointer flex items-center gap-1"
-                          >
-                            Cancel <X className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => handleSimulateSweep(order.id)}
-                            disabled={!isConnected}
-                            className="rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-800 px-4 py-2 text-[10px] font-bold text-black dark:text-white hover:border-black dark:hover:border-white hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors shrink-0 disabled:opacity-40 cursor-pointer flex items-center gap-1"
-                          >
-                            Simulate Match <Zap className="w-3 h-3 fill-current" />
-                          </button>
+                          {fullAddress && order.maker.toLowerCase() === fullAddress.toLowerCase() && (
+                            <button
+                              type="button"
+                              onClick={() => handleCancelOrder(order.id)}
+                              disabled={isSubmitting}
+                              className="rounded-full border border-red-200 dark:border-red-800/80 bg-white dark:bg-neutral-800 px-3.5 py-1.5 text-[10px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors shrink-0 disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                            >
+                              Cancel <X className="w-3 h-3" />
+                            </button>
+                          )}
                         </div>
                       </div>
 
-                      {/* Price curve mini-chart */}
-                      <div className="border-t border-neutral-100 dark:border-neutral-800 pt-3">
-                        <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-semibold uppercase tracking-wider mb-1 block">
-                          Price Curve (5min projection)
+                      {/* Mini-curve visualization */}
+                      <div className="border-t border-neutral-100 dark:border-neutral-800 pt-2 flex items-center justify-between gap-4">
+                        <span className="text-[9px] text-neutral-400 uppercase tracking-wider font-semibold">
+                          5m Dynamic Curve Projection
                         </span>
-                        {renderPriceCurve(order)}
+                        <div className="w-32">{renderPriceCurve(order)}</div>
                       </div>
                     </div>
                   ))
@@ -1013,28 +1243,48 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Settled History */}
-            <div className="border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 bg-white dark:bg-neutral-900 shadow-xs w-full">
-              <h2 className="text-lg font-bold text-black dark:text-white mb-4">Settled Matches Log</h2>
+            {/* Real On-Chain Settled Matches History */}
+            <div className="border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 bg-white dark:bg-neutral-900 shadow-sm w-full">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-black dark:text-white">Settled Matches Log</h2>
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                  Contract Event Stream
+                </span>
+              </div>
+
               <div className="flex flex-col gap-3 font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
                 {settledHistory.length === 0 ? (
-                  <p className="text-neutral-400 dark:text-neutral-500 text-xs py-4 text-center font-sans">No settled matches recorded on-chain yet.</p>
+                  <div className="text-neutral-400 dark:text-neutral-500 text-xs py-8 text-center font-sans">
+                    No settled matches recorded on-chain yet for this contract deployment.
+                  </div>
                 ) : (
                   settledHistory.map((item, idx) => (
                     <div
                       key={`${item.id}-${idx}`}
-                      className="flex justify-between items-center border-b border-neutral-100 dark:border-neutral-800 pb-2.5 last:border-none last:pb-0"
+                      className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-3 last:border-none last:pb-0"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="font-sans text-[9px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 uppercase font-semibold">
-                          Matched
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-sans text-[9px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 uppercase font-bold flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Matched
                         </span>
                         <span className="text-black dark:text-white font-bold font-sans">{item.pair}</span>
                         <span>Qty: {item.amount}</span>
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="text-black dark:text-white font-bold">{item.price}</span>
-                        <span className="text-neutral-400 dark:text-neutral-500 text-[10px]">{item.age}</span>
+                        {item.txHash && chainId ? (
+                          <a
+                            href={getExplorerTxUrl(chainId, item.txHash)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-neutral-400 hover:text-black dark:hover:text-white flex items-center gap-1 transition-colors"
+                          >
+                            <span>Tx: {item.txHash.slice(0, 8)}...</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          <span className="text-neutral-400 text-[10px]">{item.age}</span>
+                        )}
                       </div>
                     </div>
                   ))

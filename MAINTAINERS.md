@@ -4,8 +4,8 @@ This document lists the active maintainers of **Windmill Exchange (WebUI)**.
 
 | Name | GitHub | Role | Contact |
 |---|---|---|---|
-| Muneer Ali | [@Muneerali199](https://github.com/Muneerali199) | Project Contributor | Discord: `Muneer ali` |
-| Aniket | [@aniket866](https://github.com/aniket866) | Project Contributor | Discord: `aniket866` |
+| Bruno Woltzenlogel Paleo | [@Zahnentferner](https://github.com/Zahnentferner) | Project Mentor / Lead | Discord: `@b.wp` |
+| Aniket Kumar | [@aniket866](https://github.com/aniket866) | Project Maintainer | Discord: `aniket866` |
 | Stability Nexus | [@StabilityNexus](https://github.com/StabilityNexus) | Organization | [Discord](https://discord.gg/YzDKeEfWtS) |
 
 ## Responsibilities
