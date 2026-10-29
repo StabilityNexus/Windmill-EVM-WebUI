@@ -48,6 +48,7 @@ export const ERC20_ABI = [
 // ─── Chain Configurations ────────────────────────────────────────────
 
 export interface ChainConfig {
+  networkType: 'Local' | 'Testnet' | 'Mainnet';
   chainId: number;
   name: string;
   shortName: string;
@@ -61,6 +62,7 @@ export interface ChainConfig {
 export const SUPPORTED_CHAINS: Record<number, ChainConfig> = {
   // ── Localhost / Anvil ──
   31337: {
+    networkType: 'Local',
     chainId: 31337,
     name: 'Anvil Localhost',
     shortName: 'Localhost',
@@ -72,6 +74,7 @@ export const SUPPORTED_CHAINS: Record<number, ChainConfig> = {
   },
   // ── Testnets ──
   11155111: {
+    networkType: 'Testnet',
     chainId: 11155111,
     name: 'Sepolia Testnet',
     shortName: 'Sepolia',
@@ -83,6 +86,7 @@ export const SUPPORTED_CHAINS: Record<number, ChainConfig> = {
   },
   // ── Mainnets ──
   1: {
+    networkType: 'Mainnet',
     chainId: 1,
     name: 'Ethereum Mainnet',
     shortName: 'Ethereum',
@@ -93,6 +97,7 @@ export const SUPPORTED_CHAINS: Record<number, ChainConfig> = {
     wethAddress: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
   },
   137: {
+    networkType: 'Mainnet',
     chainId: 137,
     name: 'Polygon PoS',
     shortName: 'Polygon',
@@ -103,6 +108,7 @@ export const SUPPORTED_CHAINS: Record<number, ChainConfig> = {
     wethAddress: '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619',
   },
   8453: {
+    networkType: 'Mainnet',
     chainId: 8453,
     name: 'Base',
     shortName: 'Base',
@@ -113,6 +119,7 @@ export const SUPPORTED_CHAINS: Record<number, ChainConfig> = {
     wethAddress: '0x4200000000000000000000000000000000000006',
   },
   56: {
+    networkType: 'Mainnet',
     chainId: 56,
     name: 'BNB Smart Chain',
     shortName: 'BSC',
@@ -123,6 +130,7 @@ export const SUPPORTED_CHAINS: Record<number, ChainConfig> = {
     wethAddress: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
   },
   61: {
+    networkType: 'Mainnet',
     chainId: 61,
     name: 'Ethereum Classic',
     shortName: 'ETC',

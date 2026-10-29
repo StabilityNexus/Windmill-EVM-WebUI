@@ -4,6 +4,9 @@ import './globals.css';
 import { WalletProvider } from '@/context/WalletContext';
 import { ThemeProvider } from '@/components/theme-provider';
 import ConditionalLayout from '@/components/layout/ConditionalLayout';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
+import TermsOfUseModal from '@/components/terms/TermsOfUseModal';
 import { cn } from "@/lib/utils";
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
@@ -95,6 +98,10 @@ export default function RootLayout({
             <ConditionalLayout>
               {children}
             </ConditionalLayout>
+            <Navbar />
+            {children}
+            <Footer />
+            <TermsOfUseModal />
           </WalletProvider>
         </ThemeProvider>
       </body>
