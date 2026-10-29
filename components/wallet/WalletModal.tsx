@@ -3,6 +3,7 @@
 import React, { useEffect, useId, useRef, useCallback } from 'react';
 import { useWallet } from '@/context/WalletContext';
 import { Wallet, Shield, Sparkles, Link2, Key, ArrowRight, X } from 'lucide-react';
+import Link from 'next/link';
 
 // ─── Externalized Labels (ready for i18n adoption) ──────────────
 const LABELS = {
@@ -162,16 +163,28 @@ export default function WalletModal() {
                 </button>
               );
             })}
-
-            <div className="mt-4 text-center">
-              <p className="text-xs text-neutral-400 dark:text-neutral-500">
-                By connecting, you agree to our Terms of Service & Privacy Policy.
-              </p>
-            </div>
-          </div>
+<div className="mt-4 text-center">
+  <p className="text-xs text-neutral-400 dark:text-neutral-500">
+    By connecting, you agree to our{' '}
+    <Link
+      href="/terms"
+      className="underline underline-offset-2 hover:text-neutral-600 dark:hover:text-neutral-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400"
+    >
+      Terms of Service
+    </Link>
+    {' '}&amp;{' '}
+    <Link
+      href="/privacy"
+      className="underline underline-offset-2 hover:text-neutral-600 dark:hover:text-neutral-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400"
+    >
+      Privacy Policy
+    </Link>
+    .
+  </p>
+</div>
+                 </div>
         )}
       </div>
     </div>
   );
 }
-
