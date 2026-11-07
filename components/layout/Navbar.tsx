@@ -94,7 +94,7 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={() => setNetworkDropdownOpen(!networkDropdownOpen)}
-                    className="flex max-w-[88px] items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-[9px] font-bold hover:bg-neutral-100 transition-colors uppercase tracking-wider text-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 cursor-pointer 2xl:max-w-none 2xl:gap-1.5 2xl:px-3 2xl:text-[10px]"
+                    className="flex max-w-[110px] items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[10px] font-bold hover:bg-neutral-100 transition-colors uppercase tracking-wider text-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 cursor-pointer 2xl:max-w-none 2xl:gap-1.5 2xl:px-3 2xl:text-[10px]"
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                     <span className="truncate">{network}</span> ▾
@@ -122,7 +122,7 @@ export default function Navbar() {
                 <NavbarButton
                   onClick={disconnectWallet}
                   variant="dark"
-                  className="rounded-full !px-3 !py-2 text-[10px] font-bold text-white bg-black hover:bg-neutral-800 transition-colors border-none 2xl:!px-5 2xl:text-xs"
+                  className="rounded-full !px-4 !py-2 text-xs font-bold text-white bg-black hover:bg-neutral-800 transition-colors border-none 2xl:!px-5"
                 >
                   {address}
                 </NavbarButton>
