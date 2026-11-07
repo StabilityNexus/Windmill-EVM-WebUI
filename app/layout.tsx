@@ -3,7 +3,6 @@ import { Inter, Geist, Outfit } from 'next/font/google';
 import './globals.css';
 import { WalletProvider } from '@/context/WalletContext';
 import { ThemeProvider } from '@/components/theme-provider';
-import ConditionalLayout from '@/components/layout/ConditionalLayout';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import TermsOfUseModal from '@/components/terms/TermsOfUseModal';
@@ -95,9 +94,6 @@ export default function RootLayout({
       <body className={`${inter.variable} antialiased min-h-screen bg-background text-foreground transition-colors duration-300`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
           <WalletProvider>
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
             <Navbar />
             {children}
             <Footer />

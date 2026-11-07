@@ -7,6 +7,7 @@ import DOMPurify from 'dompurify';
 
 const TERMS_URL = 'https://raw.githubusercontent.com/StabilityNexus/Info/main/TermsOfUse.md';
 const STORAGE_KEY = 'windmill_terms_accepted_date';
+const LEGACY_STORAGE_KEY = 'windmill_terms_accepted_v1';
 
 const getTodayUTCDateString = (): string => {
   return new Date().toISOString().split('T')[0];
@@ -25,7 +26,9 @@ export default function TermsOfUseModal() {
 
   useEffect(() => {
     const today = getTodayUTCDateString();
-    const accepted = localStorage.getItem(STORAGE_KEY) === today;
+    const accepted =
+      localStorage.getItem(STORAGE_KEY) === today ||
+      localStorage.getItem(LEGACY_STORAGE_KEY) === 'true';
 
     requestAnimationFrame(() => {
       if (!accepted) {
@@ -140,6 +143,7 @@ export default function TermsOfUseModal() {
   const handleAccept = () => {
     const today = getTodayUTCDateString();
     localStorage.setItem(STORAGE_KEY, today);
+    localStorage.setItem(LEGACY_STORAGE_KEY, 'true');
     setIsOpen(false);
   };
 
