@@ -76,7 +76,7 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
       }}
       className={cn(
-        'relative z-[60] mx-auto hidden w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-5 rounded-full px-8 py-2 xl:grid',
+        'relative z-[60] mx-auto hidden w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-full px-3 py-2 xl:grid 2xl:gap-5 2xl:px-8',
         visible
           ? 'w-[92%] max-w-7xl glass-pill shadow-lg translate-y-4'
           : 'w-full max-w-7xl bg-transparent border-transparent translate-y-0',
@@ -95,7 +95,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
     <div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        'hidden w-fit min-w-0 flex-none flex-row items-center justify-center gap-1 xl:gap-3 text-xs xl:text-sm font-semibold text-neutral-700 dark:text-neutral-300 transition duration-200 xl:flex',
+        'hidden w-fit min-w-0 max-w-full flex-none flex-row items-center justify-center gap-0.5 text-[10px] font-semibold text-neutral-700 dark:text-neutral-300 transition duration-200 xl:flex xl:gap-1 2xl:gap-3 2xl:text-sm',
         className
       )}
     >
@@ -105,7 +105,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
           onClick={onItemClick}
           aria-current={item.active ? 'page' : undefined}
           className={cn(
-            'relative min-w-max shrink-0 rounded-full px-1 py-1.5 transition-colors duration-200 xl:px-2 xl:py-2 select-none',
+            'relative min-w-max shrink-0 rounded-full px-0.5 py-1.5 transition-colors duration-200 xl:px-1 xl:py-2 2xl:px-2 select-none',
             item.active
               ? 'bg-neutral-100/80 text-black dark:bg-white/10 dark:text-white font-bold'
               : 'text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white'
@@ -116,7 +116,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
           {hovered === idx && (
             <div className="absolute inset-0 h-full w-full rounded-full bg-neutral-100/70 dark:bg-white/10 z-0 animate-fade-in pointer-events-none" />
           )}
-          <span className="relative z-10 uppercase tracking-wider text-xs xl:text-sm font-bold whitespace-nowrap">{item.name}</span>
+          <span className="relative z-10 uppercase tracking-wide text-[10px] xl:text-[11px] 2xl:text-sm font-bold whitespace-nowrap">{item.name}</span>
         </Link>
       ))}
     </div>

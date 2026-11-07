@@ -83,21 +83,21 @@ export default function Navbar() {
           <NavItems items={navItems} />
 
           {/* Wallet Actions & Theme Switcher */}
-          <div className="relative z-30 flex items-center gap-2.5 shrink-0 justify-self-end pointer-events-auto">
+          <div className="relative z-30 flex min-w-0 max-w-full items-center gap-1.5 shrink-0 justify-self-end pointer-events-auto xl:gap-2 2xl:gap-2.5">
             {/* Theme Toggle Button */}
             <ThemeToggle />
 
             {isConnected ? (
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-1.5 xl:gap-2">
                 {/* Network select indicator */}
                 <div className="relative" ref={networkDropdownRef}>
                   <button
                     type="button"
                     onClick={() => setNetworkDropdownOpen(!networkDropdownOpen)}
-                    className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-[10px] font-bold hover:bg-neutral-100 transition-colors uppercase tracking-wider text-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 cursor-pointer"
+                    className="flex max-w-[88px] items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-[9px] font-bold hover:bg-neutral-100 transition-colors uppercase tracking-wider text-black dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 cursor-pointer 2xl:max-w-none 2xl:gap-1.5 2xl:px-3 2xl:text-[10px]"
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    {network} ▾
+                    <span className="truncate">{network}</span> ▾
                   </button>
                   {networkDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-32 rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-2xl z-50 dark:border-neutral-800 dark:bg-neutral-900">
@@ -122,7 +122,7 @@ export default function Navbar() {
                 <NavbarButton
                   onClick={disconnectWallet}
                   variant="dark"
-                  className="rounded-full !px-5 !py-2 text-xs font-bold text-white bg-black hover:bg-neutral-800 transition-colors border-none"
+                  className="rounded-full !px-3 !py-2 text-[10px] font-bold text-white bg-black hover:bg-neutral-800 transition-colors border-none 2xl:!px-5 2xl:text-xs"
                 >
                   {address}
                 </NavbarButton>
