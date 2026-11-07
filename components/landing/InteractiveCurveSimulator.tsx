@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Zap, TrendingDown, TrendingUp, Info } from 'lucide-react';
 
 export default function InteractiveCurveSimulator() {
@@ -74,11 +74,11 @@ export default function InteractiveCurveSimulator() {
   const minPriceBound = 2200;
   const maxPriceBound = 3800;
 
-  const getX = (t: number) => padding.left + (t / maxTime) * graphWidth;
-  const getY = (p: number) => {
+  const getX = useCallback((t: number) => padding.left + (t / maxTime) * graphWidth, [graphWidth, maxTime, padding.left]);
+  const getY = useCallback((p: number) => {
     const clamped = Math.max(minPriceBound, Math.min(maxPriceBound, p));
     return padding.top + (1 - (clamped - minPriceBound) / (maxPriceBound - minPriceBound)) * graphHeight;
-  };
+  }, [graphHeight, padding.top]);
 
   // Generate SVG paths
   const buyPath = useMemo(() => {
@@ -90,7 +90,7 @@ export default function InteractiveCurveSimulator() {
       points.push(`${getX(t).toFixed(1)},${getY(p).toFixed(1)}`);
     }
     return `M ${points.join(' L ')}`;
-  }, [buyStart, buySlope]);
+  }, [buyStart, buySlope, getX, getY]);
 
   const sellPath = useMemo(() => {
     const points: string[] = [];
@@ -101,7 +101,7 @@ export default function InteractiveCurveSimulator() {
       points.push(`${getX(t).toFixed(1)},${getY(p).toFixed(1)}`);
     }
     return `M ${points.join(' L ')}`;
-  }, [sellStart, sellSlope]);
+  }, [sellStart, sellSlope, getX, getY]);
 
   return (
     <section className="w-full max-w-5xl mx-auto px-4 sm:px-6 my-16">

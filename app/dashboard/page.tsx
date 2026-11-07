@@ -5,7 +5,7 @@ import { useWallet } from '@/context/WalletContext';
 import { useContract } from '@/hooks/useContract';
 import { SUPPORTED_TOKENS, getTokenAddress, getExplorerTxUrl } from '@/lib/contractConfig';
 import WalletModal from '@/components/wallet/WalletModal';
-import { Zap, X, ExternalLink, RefreshCw, AlertCircle, ArrowRightLeft, Layers, CheckCircle2 } from 'lucide-react';
+import { Zap, X, ExternalLink, RefreshCw, Layers, CheckCircle2 } from 'lucide-react';
 
 interface Order {
   id: number;
@@ -93,8 +93,9 @@ export default function DashboardPage() {
   const [txStatus, setTxStatus] = useState<string | null>(null);
 
   // ── Token Balance State ───────────────────────────────────────────
-  const [userTokenBalance, setUserTokenBalance] = useState<string | null>(null);
-
+  const [tokenInBalance, setTokenInBalance] = useState<number | null>(null);
+  const [isFetchingBalance, setIsFetchingBalance] = useState<boolean>(false);
+  
   // ── Tab State: 'my-orders' | 'all-orders' | 'matches' ─────────────
   const [activeTab, setActiveTab] = useState<'my-orders' | 'all-orders' | 'matches'>('my-orders');
 
@@ -125,6 +126,68 @@ export default function DashboardPage() {
       (o) => o.active && o.maker && o.maker.toLowerCase() === fullAddress.toLowerCase()
     );
   }, [orders, fullAddress]);
+  // Handle Token In change with identical token pair collision prevention
+  const handleTokenInChange = (newSymbol: string) => {
+    setTokenIn(newSymbol);
+    if (newSymbol === tokenOut) {
+      const alternative = availableTokens.find((t) => t.symbol !== newSymbol);
+      if (alternative) {
+        setTokenOut(alternative.symbol);
+      }
+    }
+  };
+
+  // Handle Token Out change with identical token pair collision prevention
+  const handleTokenOutChange = (newSymbol: string) => {
+    setTokenOut(newSymbol);
+    if (newSymbol === tokenIn) {
+      const alternative = availableTokens.find((t) => t.symbol !== newSymbol);
+      if (alternative) {
+        setTokenIn(alternative.symbol);
+      }
+    }
+  };
+
+  // Fetch live ERC-20 balance of tokenIn for connected wallet
+  const fetchTokenInBalance = useCallback(async () => {
+    if (!isConnected || !fullAddress || !chainId) {
+      setTokenInBalance(null);
+      return;
+    }
+    const tokenInAddr = getTokenAddress(tokenIn, chainId);
+    if (!tokenInAddr) {
+      setTokenInBalance(null);
+      return;
+    }
+
+    setIsFetchingBalance(true);
+    try {
+      const tokenMeta = SUPPORTED_TOKENS.find((t) => t.symbol === tokenIn);
+      const decimals = tokenMeta?.decimals || 18;
+
+      const balRes = await readERC20(tokenInAddr, 'balanceOf', [fullAddress]);
+      if (balRes.data !== null && balRes.data !== undefined) {
+        const rawBal = BigInt(balRes.data.toString());
+        // Exact formatting with precision
+        const formatted = Number(rawBal) / 10 ** decimals;
+        setTokenInBalance(formatted);
+      } else {
+        setTokenInBalance(null);
+      }
+    } catch {
+      setTokenInBalance(null);
+    } finally {
+      setIsFetchingBalance(false);
+    }
+  }, [isConnected, fullAddress, chainId, tokenIn, readERC20]);
+
+  useEffect(() => {
+    fetchTokenInBalance();
+  }, [fetchTokenInBalance]);
+
+  // ── Fetch on-chain data ───────────────────────────────────────────
+
+  // ── Persistent refs to prevent state overwrites on polling ──────
 
   const allActiveOrders = useMemo(() => {
     return orders.filter((o) => o.active);
@@ -155,42 +218,7 @@ export default function DashboardPage() {
     return pairs;
   }, [allActiveOrders]);
 
-  // ── User Token Balance Fetcher ────────────────────────────────────
-  useEffect(() => {
-    if (!fullAddress || !chainId) {
-      setUserTokenBalance(null);
-      return;
-    }
-
-    const tokenInAddr = getTokenAddress(tokenIn, chainId);
-    if (!tokenInAddr) {
-      setUserTokenBalance(null);
-      return;
-    }
-
-    let isMounted = true;
-    const fetchBalance = async () => {
-      try {
-        const res = await readERC20(tokenInAddr, 'balanceOf', [fullAddress]);
-        if (res.data !== null && res.data !== undefined && isMounted) {
-          const tokenMeta = SUPPORTED_TOKENS.find((t) => t.symbol === tokenIn);
-          const dec = tokenMeta?.decimals || 18;
-          const bal = Number(BigInt(String(res.data))) / 10 ** dec;
-          setUserTokenBalance(bal.toFixed(4));
-        }
-      } catch {
-        if (isMounted) setUserTokenBalance(null);
-      }
-    };
-
-    fetchBalance();
-    const interval = setInterval(fetchBalance, 6000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, [fullAddress, chainId, tokenIn, readERC20]);
-
+  
   // ── Fetch on-chain data ───────────────────────────────────────────
   const fetchOnChainData = useCallback(async () => {
     if (!isReady) return;
@@ -392,6 +420,14 @@ export default function DashboardPage() {
     setIsSubmitting(true);
     setTxStatus(null);
 
+    // Prevent identical token pairs
+    if (tokenIn === tokenOut) {
+      setTxStatus('Cannot create order with identical Token In and Token Out.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Try on-chain if contract is configured
     if (isReady && chainId) {
       const tokenInAddr = getTokenAddress(tokenIn, chainId);
       const tokenOutAddr = getTokenAddress(tokenOut, chainId);
@@ -402,6 +438,19 @@ export default function DashboardPage() {
           const decimals = tokenMeta?.decimals || 18;
           const amountWei = BigInt(Math.floor(amount * 10 ** decimals)).toString();
 
+          // ── Pre-validate on-chain ERC-20 balance ──────────────────────
+          setTxStatus('Validating token balance...');
+          const balResult = await readERC20(tokenInAddr, 'balanceOf', [fullAddress]);
+          const currentBal = balResult.data ? BigInt(balResult.data.toString()) : BigInt(0);
+
+          if (currentBal < BigInt(amountWei)) {
+            const formattedBal = Number(currentBal) / 10 ** decimals;
+            setTxStatus(`Insufficient ${tokenIn} balance. You have ${formattedBal.toFixed(4)} ${tokenIn}, but entered ${amount} ${tokenIn}.`);
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Price in RAY (1e27)
           const priceRay = toRayString(startPrice);
           const slopeRay = toRayString(slope);
           const minPriceRay = minPrice > 0 ? toRayString(minPrice) : '0';
@@ -453,6 +502,8 @@ export default function DashboardPage() {
           setAmount(1);
           fetchOnChainData();
           setTimeout(() => setTxStatus(null), 6000);
+          fetchTokenInBalance();
+          setTimeout(() => setTxStatus(null), 5000);
           return;
         } catch (err) {
           setTxStatus(`Order deployment failed: ${(err as Error).message}`);
@@ -745,8 +796,8 @@ export default function DashboardPage() {
                   <select
                     id="token-in-select"
                     value={tokenIn}
-                    onChange={(e) => setTokenIn(e.target.value)}
-                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
+                    onChange={(e) => handleTokenInChange(e.target.value)}
+                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
                   >
                     {availableTokens.map((t) => (
                       <option key={t.symbol} value={t.symbol}>
@@ -762,8 +813,8 @@ export default function DashboardPage() {
                   <select
                     id="token-out-select"
                     value={tokenOut}
-                    onChange={(e) => setTokenOut(e.target.value)}
-                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
+                    onChange={(e) => handleTokenOutChange(e.target.value)}
+                    className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
                   >
                     {availableTokens.map((t) => (
                       <option key={t.symbol} value={t.symbol}>
@@ -774,21 +825,34 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Amount with User Token Balance */}
+              {/* Amount with Live Balance & [MAX] Fill */}
               <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center text-[9px] text-neutral-400 dark:text-neutral-500">
-                  <label htmlFor="amount-input">Amount</label>
-                  {userTokenBalance !== null && (
-                    <span className="font-mono flex items-center gap-1">
-                      Bal: <span className="text-black dark:text-white font-bold">{userTokenBalance}</span> {tokenIn}
-                      <button
-                        type="button"
-                        onClick={() => setAmount(Number(userTokenBalance))}
-                        className="px-1 py-0.2 rounded bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white text-[8px] font-bold"
-                      >
-                        MAX
-                      </button>
-                    </span>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="amount-input" className="text-[9px] text-neutral-400 dark:text-neutral-500">
+                    Amount
+                  </label>
+                  {isConnected && (
+                    <div className="flex items-center gap-1.5 text-[9px]">
+                      <span className="text-neutral-400 dark:text-neutral-500">
+                        Balance:{' '}
+                        <strong className="text-black dark:text-white font-mono">
+                          {isFetchingBalance
+                            ? '...'
+                            : tokenInBalance !== null
+                            ? `${tokenInBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${tokenIn}`
+                            : `0.00 ${tokenIn}`}
+                        </strong>
+                      </span>
+                      {tokenInBalance !== null && tokenInBalance > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setAmount(tokenInBalance)}
+                          className="px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-black dark:text-white font-bold text-[8px] uppercase tracking-wider transition-colors cursor-pointer"
+                        >
+                          MAX
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
                 <input
@@ -799,9 +863,18 @@ export default function DashboardPage() {
                   required
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
-                  className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
+                  className={`border bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden transition-colors ${
+                    isConnected && tokenInBalance !== null && amount > tokenInBalance
+                      ? 'border-red-500 dark:border-red-500 focus:border-red-500'
+                      : 'border-neutral-200 dark:border-neutral-700 focus:border-neutral-400 dark:focus:border-neutral-500'
+                  }`}
                   placeholder="1.0"
                 />
+                {isConnected && tokenInBalance !== null && amount > tokenInBalance && (
+                  <span className="text-[9px] text-red-500 font-semibold normal-case">
+                    Insufficient {tokenIn} balance ({tokenInBalance.toFixed(4)} available)
+                  </span>
+                )}
               </div>
 
               {/* Starting Price */}
@@ -890,10 +963,26 @@ export default function DashboardPage() {
 
               <button
                 type="submit"
-                disabled={isSubmitting || isPaused || !isConnected}
-                className="mt-2 w-full rounded-full bg-black dark:bg-white py-3 text-center text-xs font-bold text-white dark:text-black uppercase hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                disabled={
+                  isSubmitting ||
+                  isPaused ||
+                  !isConnected ||
+                  tokenIn === tokenOut ||
+                  (isConnected && tokenInBalance !== null && amount > tokenInBalance)
+                }
+                className="mt-2 w-full rounded-full bg-black dark:bg-white py-3 text-center text-xs font-bold text-white dark:text-black uppercase hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
               >
-                {isSubmitting ? 'Deploying Order...' : isPaused ? 'Exchange Paused' : 'Deploy Curve Order'}
+                {isSubmitting
+                  ? 'Deploying...'
+                  : isPaused
+                  ? 'Exchange Paused'
+                  : !isConnected
+                  ? 'Connect Wallet to Deploy'
+                  : tokenIn === tokenOut
+                  ? 'Select Different Tokens'
+                  : isConnected && tokenInBalance !== null && amount > tokenInBalance
+                  ? `Insufficient ${tokenIn} Balance`
+                  : 'Deploy Order'}
               </button>
             </form>
           </div>

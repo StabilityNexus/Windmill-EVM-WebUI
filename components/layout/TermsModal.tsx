@@ -13,11 +13,11 @@ export default function TermsModal() {
     try {
       const accepted = localStorage.getItem(STORAGE_KEY);
       if (!accepted) {
-        setIsOpen(true);
+        setTimeout(() => setIsOpen(true), 0);
       }
     } catch {
       // LocalStorage access might fail in private/incognito mode or restricted iframe
-      setIsOpen(false);
+      // fallback to default false
     }
   }, []);
 
@@ -27,7 +27,7 @@ export default function TermsModal() {
     } catch {
       // Ignore storage write error
     }
-    setIsOpen(false);
+    // fallback to default false
   };
 
   if (!isOpen) return null;
@@ -40,46 +40,39 @@ export default function TermsModal() {
             <ShieldCheck className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Terms of Use & Disclaimer</h3>
-            <p className="text-xs text-neutral-400">Please read and agree before continuing</p>
+            <h2 className="text-lg font-bold text-white">Terms of Use Notice</h2>
+            <p className="text-xs text-neutral-400">Please review our terms before proceeding</p>
           </div>
         </div>
 
-        <div className="text-xs text-neutral-300 space-y-3 leading-relaxed max-h-60 overflow-y-auto pr-2 border-y border-neutral-800/80 py-3 my-4">
+        <div className="space-y-3 text-xs text-neutral-300 leading-relaxed max-h-60 overflow-y-auto pr-1 border-y border-neutral-800/80 py-3 my-4">
           <p>
-            Welcome to <strong>Windmill Exchange</strong>. Windmill is a decentralized, non-custodial
-            on-chain order matching protocol. Interacting with smart contracts and digital assets
-            carries inherent financial and technological risks.
+            By accessing or using the Windmill EVM Exchange, you agree that you have read, understood, and accept all the terms and conditions outlined in our Terms of Use.
           </p>
           <p>
-            By accessing or using this web interface and connecting your Web3 wallet, you confirm that:
+            Windmill Exchange is a decentralized smart contract platform. Users interact directly with autonomous protocols on the EVM blockchain. You are solely responsible for safeguarding your private keys and assessing financial risks.
           </p>
-          <ul className="list-disc pl-5 space-y-1 text-neutral-400">
-            <li>You have read, understood, and agree to be bound by the{' '}
-              <Link href="/terms" target="_blank" className="text-cyan-400 hover:underline inline-flex items-center gap-0.5">
-                Terms of Service <ExternalLink className="h-3 w-3 inline" />
-              </Link>{' '}
-              and{' '}
-              <Link href="/privacy" target="_blank" className="text-cyan-400 hover:underline inline-flex items-center gap-0.5">
-                Privacy Policy <ExternalLink className="h-3 w-3 inline" />
-              </Link>.
-            </li>
-            <li>You acknowledge that Windmill Exchange is provided on an &quot;AS IS&quot; and &quot;AS AVAILABLE&quot; basis without warranties of any kind.</li>
-            <li>The developers and Stability Nexus disclaim all liability for any loss of funds or damages resulting from smart contract bugs, market volatility, or keeper execution timing.</li>
-            <li>You are not a resident of or located in any sanctioned or restricted jurisdiction.</li>
-          </ul>
+          <div className="pt-1">
+            <Link
+              href="/terms-of-use"
+              target="_blank"
+              className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 font-medium underline underline-offset-4"
+            >
+              Read Full Terms of Use <ExternalLink className="h-3 w-3" />
+            </Link>
+          </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 pt-2">
+        <div className="flex justify-end gap-3 mt-4">
           <button
+            type="button"
             onClick={handleAccept}
-            className="w-full flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/20 hover:from-cyan-400 hover:to-blue-500 transition-all cursor-pointer"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs transition-colors cursor-pointer"
           >
-            I Agree & Continue
+            I Acknowledge & Accept
           </button>
         </div>
       </div>
     </div>
   );
 }
-

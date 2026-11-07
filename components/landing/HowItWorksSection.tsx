@@ -2,6 +2,7 @@
 
 import { STEPS } from '@/utils/constants';
 import { useScrollRevealChildren } from '@/hooks/useScrollReveal';
+import InteractiveCurveSimulator from '@/components/simulator/InteractiveCurveSimulator';
 
 export default function HowItWorksSection() {
   const containerRef = useScrollRevealChildren<HTMLDivElement>({ threshold: 0.1 });
@@ -12,7 +13,7 @@ export default function HowItWorksSection() {
       ref={containerRef}
       className="bg-white dark:bg-[#0a0a0a] text-foreground section-padding border-t border-black/5 dark:border-white/10 transition-colors duration-300"
     >
-      <div className="mx-auto max-w-4xl px-6 md:px-8">
+      <div className="mx-auto max-w-5xl px-6 md:px-8">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-20 flex flex-col items-center">
           <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-3">Matching Lifecycle</h2>
@@ -22,7 +23,7 @@ export default function HowItWorksSection() {
         </div>
 
         {/* Steps Timeline Grid with 3D Flip Reveals */}
-        <div className="relative border-l border-black/5 dark:border-white/10 pl-6 md:pl-10 ml-4 md:ml-8 max-w-2xl mx-auto flex flex-col gap-12">
+        <div className="relative border-l border-black/5 dark:border-white/10 pl-6 md:pl-10 ml-4 md:ml-8 max-w-2xl mx-auto flex flex-col gap-12 mb-20">
           {/* Vertical timeline line gradient decorator */}
           <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-black dark:from-white via-black/10 dark:via-white/10 to-transparent -translate-x-[0.5px]" />
 
@@ -51,7 +52,13 @@ export default function HowItWorksSection() {
             </div>
           ))}
         </div>
+
+        {/* Interactive Dynamic Curve Simulator Section */}
+        <div data-reveal className="mt-16">
+          <InteractiveCurveSimulator />
+        </div>
       </div>
     </section>
   );
 }
+

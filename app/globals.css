@@ -464,7 +464,7 @@ body {
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --muted-foreground: oklch(0.85 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
@@ -499,6 +499,21 @@ body {
   }
 }
 
+@keyframes curve-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.02);
+  }
+}
+
+.animate-curve-pulse {
+  animation: curve-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal-3d,
   .reveal-3d-flip,
@@ -515,7 +530,8 @@ body {
   .text-reveal-4,
   .animate-float,
   .animate-float-delayed,
-  .animate-pulse-slow {
+  .animate-pulse-slow,
+  .animate-curve-pulse {
     animation: none;
   }
 }

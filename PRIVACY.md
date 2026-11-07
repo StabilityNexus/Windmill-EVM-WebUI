@@ -58,7 +58,7 @@ However, no method of electronic storage or transmission can be guaranteed to be
 
 - Maintaining the security of their devices, wallets, and private keys.
 - Protecting any data they choose to export, share, or otherwise make available.
-- Confirm their own understanding of Web3 security practices (see the Know Your Assumptions (KYA) page).
+- Confirm their own understanding of Web3 security practices (see the Terms of Use page).
 
 ## Data Deletion
 

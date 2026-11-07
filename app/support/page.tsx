@@ -21,10 +21,10 @@ export default function SupportPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
           {/* FAQ Column */}
-          <FAQContent theme="light" />
+          <FAQContent />
 
           {/* Support Ticket Column */}
-          <SupportForm theme="light" />
+          <SupportForm />
         </div>
       </div>
     </main>
