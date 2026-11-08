@@ -112,9 +112,12 @@ export default function DashboardPage() {
   const refreshGen=useRef(0);      // changes only on chain/contract change or unmount
   const refreshing=useRef(false);  // skips overlapping poll ticks
   const storageKey=`windmill:${chainId??'default'}:${contractAddress?.toLowerCase()??''}`;
+  const activeStorageKeyRef=useRef(storageKey);
+  activeStorageKeyRef.current=storageKey;
 
   // 1) identity reset: runs whenever chain/contract changes (declare BEFORE the polling effect)
   useEffect(()=>{
+    activeStorageKeyRef.current=storageKey;
     refreshGen.current++;      // invalidate anything in flight
     refreshing.current=false;
     setHistoryError(null);
@@ -241,15 +244,18 @@ export default function DashboardPage() {
 
   // ── Polling & on-chain data refresh ────────────────────────────────
   const POLL_MS=4000;
+  const boundStorageKey=storageKey;
 
   const refresh=useCallback(async()=>{
+    // Reject refreshes if this closure belongs to an obsolete chain identity
+    if(boundStorageKey!==activeStorageKeyRef.current)return;
     if(!isReady||!contractAddress)return;
     if(refreshing.current)return;
     refreshing.current=true;
     setIsLoadingOnChain(true);
     const gen=refreshGen.current;
-    const stale=()=>gen!==refreshGen.current;
-    const key=`${storageKey}:inactive`; // captured from THIS identity
+    const stale=()=>gen!==refreshGen.current||boundStorageKey!==activeStorageKeyRef.current;
+    const key=`${boundStorageKey}:inactive`; // captured from THIS identity
     try{
       const head=await getEventHead();
       if(stale())return;
@@ -317,13 +323,15 @@ export default function DashboardPage() {
           });
         });
 
+        if(stale())return;
         inactiveRef.current={key,ids};
         try{localStorage.setItem(key,JSON.stringify([...ids]));}catch{}
         const history=parsedMatches.reverse();
         setSettledHistory(history);
-        try{localStorage.setItem(`${storageKey}:history`,JSON.stringify(history));}catch{}
+        try{localStorage.setItem(`${boundStorageKey}:history`,JSON.stringify(history));}catch{}
         setHistoryError(null);
       }else{
+        if(stale())return;
         setHistoryError('Event history incomplete. Previous successful data retained.');
       }
 
@@ -408,9 +416,14 @@ export default function DashboardPage() {
         setIsLoadingOnChain(false);
       }
     }
-  },[storageKey,getEventHead,readContract,fetchEvents,isReady,contractAddress,chainId]);
+  },[boundStorageKey,getEventHead,readContract,fetchEvents,isReady,contractAddress,chainId]);
 
-  const fetchOnChainData=refresh;
+  const refreshRef=useRef<()=>Promise<void>>(refresh);
+  refreshRef.current=refresh;
+
+  const fetchOnChainData=useCallback(async()=>{
+    await refreshRef.current();
+  },[]);
 
   // 2) polling
   useEffect(()=>{
