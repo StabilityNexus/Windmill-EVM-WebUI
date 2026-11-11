@@ -42,7 +42,7 @@ export function useContract() {
 
       try {
         // Use provider if available, otherwise fallback to RPC fetch
-        const target = provider || null;
+        const target = chainId ? provider : null;
         if (target) {
           const iface = new (await import('ethers')).Interface(WINDMILL_EXCHANGE_ABI);
           const calldata = iface.encodeFunctionData(method, args as never[]);
@@ -79,7 +79,7 @@ export function useContract() {
         return { data: null, error: (err as Error).message };
       }
     },
-    [contractAddress, provider, rpcUrl]
+    [contractAddress, provider, rpcUrl, chainId]
   );
 
   // ── Write contract (sends transaction via wallet) ─────────────────
