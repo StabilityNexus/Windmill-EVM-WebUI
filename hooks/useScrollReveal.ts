@@ -45,8 +45,13 @@ export function useScrollReveal<T extends HTMLElement>(
 // ─── Children of a Container ────────────────────────────────────
 
 /**
- * Observes every child with `[data-reveal]` inside the container.
- * Each child independently gets the `revealed` class when visible.
+ * Observes every `[data-reveal]` descendant of the container and adds the
+ * `revealed` class when each one enters the viewport, independently.
+ *
+ * Also tracks DOM mutations within the container, so `[data-reveal]`
+ * elements mounted after the initial render — e.g. switching between tabs
+ * that unmount/remount their content — are observed too, instead of only
+ * whatever existed at the moment this hook's effect first ran.
  */
 export function useScrollRevealChildren<T extends HTMLElement>(
   options: ScrollRevealOptions = {},
@@ -57,8 +62,6 @@ export function useScrollRevealChildren<T extends HTMLElement>(
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
-    const children = container.querySelectorAll('[data-reveal]');
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -72,8 +75,43 @@ export function useScrollRevealChildren<T extends HTMLElement>(
       { threshold, rootMargin },
     );
 
-    children.forEach((child) => observer.observe(child));
-    return () => observer.disconnect();
+    const scanForRevealTargets = (root: ParentNode) => {
+      root.querySelectorAll('[data-reveal]').forEach((el) => observer.observe(el));
+    };
+
+    // Initial pass over whatever is already mounted
+    scanForRevealTargets(container);
+
+    const unobserveRevealTargets = (root: Element) => {
+      if (root.matches('[data-reveal]')) observer.unobserve(root);
+      root.querySelectorAll('[data-reveal]').forEach((el) => observer.unobserve(el));
+    };
+
+    // Re-scan whenever the container's subtree changes, so content mounted
+    // later (e.g. switching tabs that unmount/remount their content) still
+    // gets observed instead of staying invisible forever.
+    const mutationObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return;
+          if (node.matches('[data-reveal]')) observer.observe(node);
+          scanForRevealTargets(node);
+        });
+
+        // Stop tracking elements that just left the DOM (e.g. the other tab's
+        // content) so repeated switching doesn't pile up stale observations.
+        mutation.removedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return;
+          unobserveRevealTargets(node);
+        });
+      }
+    });
+    mutationObserver.observe(container, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      mutationObserver.disconnect();
+    };
   }, [threshold, rootMargin]);
 
   return containerRef;

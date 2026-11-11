@@ -4,23 +4,43 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import WalletModal from '@/components/wallet/WalletModal';
 import { useScrollRevealChildren } from '@/hooks/useScrollReveal';
 import { useContract } from '@/hooks/useContract';
+import { useNetworkPing } from '@/hooks/useNetworkPing';
 import { Monitor, Activity, Zap, CheckCircle2, Percent, Fuel, Search, RefreshCw, Play, Square, Terminal, Loader2 } from 'lucide-react';
 import CodeBlock from '@/components/ui/CodeBlock';
+
+// ── Keeper telemetry (from GET /api/keeper's `telemetry` field) ─────────
+interface KeeperTelemetryData {
+  isHealthy?: boolean;
+  consecutiveFailures?: number;
+  lastError?: unknown;
+  uptimeSeconds?: number;
+}
+interface KeeperTelemetry {
+  ok: boolean;
+  data: KeeperTelemetryData | null;
+}
 
 // ── Keeper Bot Panel (local process control) ────────────────────────────
 function KeeperBotPanel() {
   const [running, setRunning] = useState(false);
   const [pid, setPid] = useState<number | null>(null);
   const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [telemetry, setTelemetry] = useState<KeeperTelemetry | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
-  const logEndRef = useRef<HTMLDivElement>(null);
+  const logContainerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom whenever new logs arrive
+  // Scroll the log box itself to its bottom whenever new logs arrive.
+  // Deliberately NOT scrollIntoView() on an anchor element here — that
+  // scrolls every scrollable ancestor (including the page), so with the
+  // keeper polling every couple seconds it kept yanking the whole page's
+  // scroll position out from under the user while they tried to scroll.
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = logContainerRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
   }, [logs]);
 
   // Poll status + logs
@@ -32,6 +52,7 @@ function KeeperBotPanel() {
       setRunning(data.running);
       setPid(data.pid);
       setStartedAt(data.startedAt);
+      setTelemetry(data.telemetry ?? null);
       setLogs(data.logs ?? []);
     } catch {
       // network blip — ignore
@@ -96,6 +117,7 @@ function KeeperBotPanel() {
       }
       setRunning(false);
       setPid(null);
+      setTelemetry(null);
       setPolling(false);
       // One final fetch to get the exit log
       setTimeout(fetchStatus, 500);
@@ -128,11 +150,35 @@ function KeeperBotPanel() {
         {/* Status badge */}
         <div className="flex items-center gap-2">
           {running ? (
-            <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-full">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Running
-              {pid && <span className="text-emerald-500 dark:text-emerald-400 font-mono ml-1">PID {pid}</span>}
-            </span>
+            <>
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-full">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Running
+                {pid && <span className="text-emerald-500 dark:text-emerald-400 font-mono ml-1">PID {pid}</span>}
+              </span>
+              {telemetry?.ok && telemetry.data?.isHealthy === false ? (
+                <span className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider bg-amber-50 dark:bg-amber-950/60 px-3 py-1.5 rounded-full">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  Stalled
+                  {typeof telemetry.data?.consecutiveFailures === 'number' && telemetry.data.consecutiveFailures > 0 && (
+                    <span className="text-amber-500 dark:text-amber-400 font-mono ml-1">
+                      {telemetry.data.consecutiveFailures} failures
+                    </span>
+                  )}
+                </span>
+              ) : telemetry?.ok && telemetry.data?.isHealthy ? (
+                <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                  Healthy
+                </span>
+              ) : (
+                <span
+                  title="Set TELEMETRY_PORT in the keeper's .env to enable live health checks"
+                  className="text-[10px] font-semibold text-neutral-300 dark:text-neutral-600 uppercase tracking-wider cursor-help"
+                >
+                  Telemetry Unavailable
+                </span>
+              )}
+            </>
           ) : (
             <span className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider bg-neutral-50 dark:bg-neutral-800 px-3 py-1.5 rounded-full">
               <span className="h-1.5 w-1.5 rounded-full bg-neutral-300 dark:bg-neutral-600" />
@@ -199,7 +245,7 @@ function KeeperBotPanel() {
       </div>
 
       {/* Live log viewer */}
-      <div className="bg-neutral-950 rounded-xl p-4 max-h-72 overflow-y-auto font-mono text-[11px] text-neutral-300 leading-relaxed">
+      <div ref={logContainerRef} className="bg-neutral-950 rounded-xl p-4 max-h-72 overflow-y-auto font-mono text-[11px] text-neutral-300 leading-relaxed">
         {logs.length === 0 ? (
           <div className="text-neutral-600 italic py-6 text-center text-xs">
             No logs yet. Click &ldquo;Start Keeper Bot&rdquo; to begin.
@@ -222,7 +268,6 @@ function KeeperBotPanel() {
             </div>
           ))
         )}
-        <div ref={logEndRef} />
       </div>
     </div>
   );
@@ -234,12 +279,14 @@ export default function KeepersPage() {
 
   // ── Live Keeper State & Contract Events ──────────────────────────────
   const [keeperRunning, setKeeperRunning] = useState(false);
+  const [keeperTelemetry, setKeeperTelemetry] = useState<KeeperTelemetry | null>(null);
   const [keeperLogs, setKeeperLogs] = useState<string[]>([]);
   const [totalOrders, setTotalOrders] = useState<number | null>(null);
   const [matchCount, setMatchCount] = useState<number>(0);
   const [matchedEvents, setMatchedEvents] = useState<Array<{ status: string; detail: string; time: string; keeper: string }>>([]);
 
   const { readContract, isReady, fetchEvents } = useContract();
+  const { latencyMs: pingMs, status: pingStatus } = useNetworkPing();
 
   // Poll keeper status from API
   useEffect(() => {
@@ -249,6 +296,7 @@ export default function KeepersPage() {
         if (res.ok) {
           const data = await res.json();
           setKeeperRunning(Boolean(data.running));
+          setKeeperTelemetry(data.telemetry ?? null);
           if (data.logs) {
             setKeeperLogs(data.logs);
           }
@@ -312,10 +360,39 @@ export default function KeepersPage() {
     return combined;
   }, [matchedEvents, keeperLogs]);
 
+  // Ping status → a short, human label for the stat card
+  const pingLabel =
+    pingStatus === 'online' && pingMs !== null
+      ? `${pingMs}ms`
+      : pingStatus === 'pinging'
+      ? 'Pinging…'
+      : pingStatus === 'timeout'
+      ? 'Timeout'
+      : pingStatus === 'error'
+      ? 'Offline'
+      : isReady
+      ? 'Connected'
+      : 'Ready';
+
+  // Keeper health label, sourced from the keeper's own /health telemetry
+  const keeperHealthy = keeperTelemetry?.ok ? keeperTelemetry.data?.isHealthy : null;
+  const keeperProcessLabel = !keeperRunning
+    ? 'Stopped'
+    : keeperHealthy === false
+    ? 'Stalled'
+    : keeperHealthy === true
+    ? 'Healthy'
+    : 'Running'; // telemetry disabled/unreachable — fall back to the plain running state
+
   // Dynamic Statistics
   const dynamicKeeperStats = [
-    { label: 'Keeper Process', value: keeperRunning ? 'Running' : 'Stopped', icon: Monitor, highlight: keeperRunning },
-    { label: 'Network Node', value: isReady ? 'Connected' : 'Ready', icon: Activity },
+    {
+      label: 'Keeper Process',
+      value: keeperProcessLabel,
+      icon: Monitor,
+      highlight: keeperRunning && keeperHealthy !== false,
+    },
+    { label: 'Network Node', value: pingLabel, icon: Activity, highlight: pingStatus === 'online' },
     { label: 'Sweep Latency', value: '15s Loop', icon: Zap },
     { label: 'Contract Orders', value: totalOrders !== null ? totalOrders.toString() : '0', icon: CheckCircle2 },
     { label: 'Keeper Fee Rate', value: '0.1%', icon: Percent },
