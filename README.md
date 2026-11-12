@@ -96,6 +96,16 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+### Support requests
+
+The support form opens a prefilled email draft addressed to AOSSIE at
+`aossie.oss@gmail.com`, as listed on [AOSSIE's website](https://aossie.org/en).
+Users send the draft from their email app. If no app opens, the address is also
+shown on the form so they can copy their message into webmail.
+The form keeps entered details and does not claim delivery or a response time.
+No email API keys, external delivery service, Redis, or application rate limit
+are required.
+
 ### Build, lint and type-check
 
 ```bash
