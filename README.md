@@ -152,7 +152,9 @@ We welcome contributions of all kinds! Please read our [CONTRIBUTING.md](CONTRIB
 
 ## 🌐 Deployment
 
-The repo ships with a GitHub Actions workflow (`.github/workflows/nextjs.yml`) that builds and deploys the static export to **GitHub Pages** on every push to `main`.
+The site is deployed on **Vercel** on every push to `main` (see `vercel.json`). GitHub Actions (`.github/workflows/ci.yml`) runs lint and the production build for every push and pull request.
+
+The old sample workflow that deployed to GitHub Pages has been removed: Pages was never enabled for this repository, so every run failed at `actions/configure-pages` with `Get Pages site failed`. The app also cannot be statically exported as-is because it ships a dynamic `/api/keeper` route. If Pages is enabled later, the deployment should be reintroduced as a separate, tested workflow.
 
 ---
 
