@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "outDir": ".next/test-dist",
+    "incremental": false,
+    "isolatedModules": false,
+    "plugins": []
+  },
+  "include": ["lib/price.ts", "test/price.test.ts"],
+  "exclude": ["node_modules"]
+}
