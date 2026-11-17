@@ -28,7 +28,6 @@ Windmill Exchange is designed to minimize the storage and transmission of person
 
 - The Interface stores browser `localStorage` data **only** to remember UI preferences, such as the selected target network and recent transaction history filter states. No private keys, seed phrases, or wallet credentials are ever handled, stored, or transmitted by Windmill Exchange.
 - The project is deployed as a static frontend on Vercel; Vercel's standard hosting (including any standard access/error logs) is governed by Vercel's own privacy policy.
-- The optional keepers page exposes a development-only API route (`/api/keeper`) that may spawn a local keeper process. Its status and logs are held **in-memory only**, are never persisted to disk, and are not sent to any third party.
 - There are no user accounts, no authentication service, no user-generated-content database, and no cloud storage controlled by Windmill Exchange.
 
 ## Data Sharing
