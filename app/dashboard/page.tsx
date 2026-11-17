@@ -197,7 +197,7 @@ export default function DashboardPage() {
   const matchablePairs = useMemo(() => {
     const pairs: Array<{ buy: Order; sell: Order }> = [];
     // Expired orders stay active on-chain until cancelled, but matchOrders reverts with OrderExpired
-    const now = Date.now() / 1000;
+    const now = Math.floor(Date.now() / 1000);
     const live = allActiveOrders.filter((o) => !o.expiry || o.expiry >= now);
     const activeBuys = live.filter((o) => o.type === 'Buy');
     const activeSells = live.filter((o) => o.type === 'Sell');
