@@ -1,12 +1,104 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type {JsonRpcProvider} from 'ethers';
 import { useWallet } from '@/context/WalletContext';
 import { WINDMILL_EXCHANGE_ABI, ERC20_ABI, SUPPORTED_CHAINS, DEFAULT_CHAIN_ID } from '@/lib/contractConfig';
 
 // ── Minimal ethers-free ABI encoding/provider ───────────────────────
 // We use the browser's built-in fetch + window.ethereum for calls
 // to keep the frontend lightweight without bundling ethers.
+
+type Log={args:unknown[];transactionHash?:string;blockNumber:number};
+type Scan={next:number;logs:Log[]};
+type Result={data:Log[]|null;error:string|null;complete:boolean;coveredThrough:number|null};
+const providers=new Map<string,Promise<JsonRpcProvider>>();
+const jobs=new Map<string,Promise<unknown>>();
+let dbPromise:Promise<IDBDatabase>|undefined;
+function getDB(){
+  return dbPromise??=new Promise<IDBDatabase>((resolve,reject)=>{
+    if(typeof indexedDB==='undefined'){
+      reject(new Error('IndexedDB unavailable'));
+      return;
+    }
+    const r=indexedDB.open('windmill-events',1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('scans');
+    r.onsuccess=()=>resolve(r.result);
+    r.onerror=()=>reject(r.error);
+  });
+}
+async function getProvider(url:string){
+  let p=providers.get(url);
+  if(!p){
+    p=import('ethers').then(({JsonRpcProvider})=>new JsonRpcProvider(url));
+    providers.set(url,p);
+    p.catch(()=>{if(providers.get(url)===p)providers.delete(url);});
+  }
+  return p;
+}
+async function readScan(key:string,start:number):Promise<Scan>{
+  try{
+    const db=await getDB();
+    return await new Promise((resolve,reject)=>{
+      const r=db.transaction('scans','readonly').objectStore('scans').get(key);
+      r.onsuccess=()=>resolve(r.result??{next:start,logs:[]});
+      r.onerror=()=>reject(r.error);
+    });
+  }catch{
+    return{next:start,logs:[]};
+  }
+}
+async function saveScan(key:string,s:Scan){
+  try{
+    const db=await getDB();
+    await new Promise<void>((resolve,reject)=>{
+      const tx=db.transaction('scans','readwrite');
+      tx.objectStore('scans').put(s,key);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error);
+      tx.onabort=()=>reject(tx.error);
+    });
+  }catch{}
+}
+interface FilterableContract{
+  queryFilter(filter:unknown,fromBlock?:number|string,toBlock?:number|string):Promise<Array<{args?:unknown[];transactionHash?:string;blockNumber?:number}>>;
+}
+async function scanEvents(contract:FilterableContract,filter:unknown,key:string,start:number,head:number):Promise<Result>{
+  // serialize per key: a later caller (maybe with a newer head) waits, then resumes from the saved checkpoint
+  const prev=jobs.get(key)??Promise.resolve();
+  const job=prev.catch(()=>{}).then(async():Promise<Result>=>{
+    let s:Scan={next:start,logs:[]};
+    try{
+      s=await readScan(key,start);
+      while(s.next<=head){
+        const to=Math.min(s.next+1999,head);
+        const chunk=await contract.queryFilter(filter,s.next,to);
+        const next:Scan={
+          next:to+1,
+          logs:[...s.logs,...chunk.map((l):Log=>({
+            args:Array.from(l.args??[],(v:unknown)=>typeof v==='bigint'?v.toString():v),
+            transactionHash:l.transactionHash,
+            blockNumber:l.blockNumber??0
+          }))]
+        };
+        await saveScan(key,next);
+        s=next;
+      }
+      // never return data from beyond the requested head
+      const coveredThrough=Math.min(s.next-1,head);
+      const data=s.logs.filter(l=>(l.blockNumber??0)<=head);
+      return{data,error:null,complete:coveredThrough===head,coveredThrough};
+    }catch(e){
+      return{data:null,error:String(e),complete:false,coveredThrough:Math.min(s.next-1,head)};
+    }
+  });
+  jobs.set(key,job);
+  try{return await job;}
+  finally{if(jobs.get(key)===job)jobs.delete(key);}
+}
+
+export type EventLog=Log;
+export type EventFetchResult=Result;
 
 interface ContractCallResult {
   data: unknown;
@@ -192,26 +284,23 @@ export function useContract() {
     [provider, fullAddress]
   );
 
-  const fetchEvents = useCallback(
-    async (eventName: string, fromBlock: number = 0) => {
-      if (!contractAddress || !rpcUrl) {
-        return { data: null, error: 'Contract or RPC not configured' };
-      }
-      try {
-        const { JsonRpcProvider, Contract } = await import('ethers');
-        const rpcProvider = new JsonRpcProvider(rpcUrl);
-        const contract = new Contract(contractAddress, WINDMILL_EXCHANGE_ABI, rpcProvider);
-        
-        const filter = contract.filters[eventName]();
-        const logs = await contract.queryFilter(filter, fromBlock, 'latest');
-        return { data: logs, error: null };
-      } catch (err) {
-        console.error(`Error fetching events for ${eventName}:`, err);
-        return { data: null, error: (err as Error).message };
-      }
-    },
-    [contractAddress, rpcUrl]
-  );
+  const getEventHead=useCallback(async():Promise<number>=>{
+    if(!rpcUrl)throw new Error('RPC not configured');
+    return(await getProvider(rpcUrl)).getBlockNumber();
+  },[rpcUrl]);
+
+  const fetchEvents=useCallback(async(eventName:string,headBlock?:number):Promise<Result>=>{
+    const chainConfig=SUPPORTED_CHAINS[readChainId];
+    const start=chainConfig?.deployedBlock;
+    if(start===undefined)return{data:null,error:'Deployment block unknown',complete:false,coveredThrough:null};
+    if(!contractAddress||!rpcUrl)return{data:null,error:'Contract or RPC not configured',complete:false,coveredThrough:null};
+    const provider=await getProvider(rpcUrl);
+    const {Contract}=await import('ethers');
+    const contract=new Contract(contractAddress,WINDMILL_EXCHANGE_ABI,provider);
+    // "v2" so checkpoints written by the older shape are never reused
+    const key=`v2:${readChainId}:${contractAddress.toLowerCase()}:${eventName}:${start}`;
+    return scanEvents(contract,contract.filters[eventName](),key,start,headBlock??await provider.getBlockNumber());
+  },[rpcUrl,contractAddress,readChainId]);
 
   return {
     contractAddress,
@@ -225,6 +314,7 @@ export function useContract() {
     readERC20,
     approveERC20,
     fetchEvents,
+    getEventHead,
   };
 }
 

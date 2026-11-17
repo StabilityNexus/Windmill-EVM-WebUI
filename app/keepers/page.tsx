@@ -276,10 +276,12 @@ export default function KeepersPage() {
       if (events && Array.isArray(events)) {
         setMatchCount(events.length);
         const parsed = events.slice(-10).map((ev: unknown) => {
-          const e = ev as { args?: { buyOrderId?: bigint; sellOrderId?: bigint; keeper?: string } };
-          const buyId = e.args?.buyOrderId?.toString() || '?';
-          const sellId = e.args?.sellOrderId?.toString() || '?';
-          const keeperAddr = e.args?.keeper ? `${e.args.keeper.slice(0, 6)}...${e.args.keeper.slice(-4)}` : 'Node';
+          const e = ev as { args?: Record<string, unknown> | unknown[] };
+          const args = e.args || [];
+          const buyId = (Array.isArray(args) ? args[0] : (args as Record<string, unknown>).buyOrderId)?.toString() || '?';
+          const sellId = (Array.isArray(args) ? args[1] : (args as Record<string, unknown>).sellOrderId)?.toString() || '?';
+          const keeper = (Array.isArray(args) ? args[2] : (args as Record<string, unknown>).keeper);
+          const keeperAddr = keeper ? `${String(keeper).slice(0, 6)}...${String(keeper).slice(-4)}` : 'Node';
           return {
             status: 'SUCCESS',
             detail: `Buy #${buyId} matched Sell #${sellId} on-chain`,

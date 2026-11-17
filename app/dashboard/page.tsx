@@ -77,7 +77,7 @@ function formatPrice(val: number): string {
 
 export default function DashboardPage() {
   const { isConnected, setWalletModalOpen, fullAddress, chainId, network } = useWallet();
-  const { contractAddress, rpcUrl, writeContract, readContract, readERC20, approveERC20, fetchEvents, isReady } = useContract();
+  const {contractAddress,rpcUrl,writeContract,readContract,readERC20,approveERC20,fetchEvents,getEventHead,isReady}=useContract();
 
   // ── Form State ────────────────────────────────────────────────────
   const [orderType, setOrderType] = useState<'Buy' | 'Sell'>('Buy');
@@ -107,6 +107,34 @@ export default function DashboardPage() {
   // ── Stats ─────────────────────────────────────────────────────────
   const [totalOrders, setTotalOrders] = useState<number | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const[historyError,setHistoryError]=useState<string|null>(null);
+  const inactiveRef=useRef<{key:string;ids:Set<number>}>({key:'',ids:new Set()});
+  const refreshGen=useRef(0);      // changes only on chain/contract change or unmount
+  const refreshing=useRef(false);  // skips overlapping poll ticks
+  const storageKey=`windmill:${chainId??'default'}:${contractAddress?.toLowerCase()??''}`;
+  const activeStorageKeyRef=useRef(storageKey);
+  activeStorageKeyRef.current=storageKey;
+
+  // 1) identity reset: runs whenever chain/contract changes (declare BEFORE the polling effect)
+  useEffect(()=>{
+    activeStorageKeyRef.current=storageKey;
+    refreshGen.current++;      // invalidate anything in flight
+    refreshing.current=false;
+    setHistoryError(null);
+    let saved:unknown[]=[];
+    try{
+      const raw=localStorage.getItem(`${storageKey}:history`);
+      if(raw)saved=JSON.parse(raw);
+    }catch{}
+    setSettledHistory(saved as SettledMatch[]); // [] when nothing saved, so the old chain never stays visible
+    let ids:number[]=[];
+    const key=`${storageKey}:inactive`;
+    try{ids=JSON.parse(localStorage.getItem(key)??'[]');}catch{}
+    inactiveRef.current={key,ids:new Set(ids)};
+    setOrders([]);
+    setTotalOrders(null);
+    setIsPaused(false);
+  },[storageKey]);
 
   // ── Auto-Match Engine State ────────────────────────────────────────
   // Auto-match is permanently and strictly active
@@ -185,10 +213,6 @@ export default function DashboardPage() {
     fetchTokenInBalance();
   }, [fetchTokenInBalance]);
 
-  // ── Fetch on-chain data ───────────────────────────────────────────
-
-  // ── Persistent refs to prevent state overwrites on polling ──────
-
   const allActiveOrders = useMemo(() => {
     return orders.filter((o) => o.active);
   }, [orders]);
@@ -218,170 +242,200 @@ export default function DashboardPage() {
     return pairs;
   }, [allActiveOrders]);
 
-  
-  // ── Fetch on-chain data ───────────────────────────────────────────
-  const fetchOnChainData = useCallback(async () => {
-    if (!isReady) return;
-    setIsLoadingOnChain(true);
+  // ── Polling & on-chain data refresh ────────────────────────────────
+  const POLL_MS=4000;
+  const boundStorageKey=storageKey;
 
-    try {
-      const [totalResult, pausedResult, matchedLogs, cancelledLogs, filledLogs] = await Promise.all([
+  const refresh=useCallback(async()=>{
+    // Reject refreshes if this closure belongs to an obsolete chain identity
+    if(boundStorageKey!==activeStorageKeyRef.current)return;
+    if(!isReady||!contractAddress)return;
+    if(refreshing.current)return;
+    refreshing.current=true;
+    setIsLoadingOnChain(true);
+    const gen=refreshGen.current;
+    const stale=()=>gen!==refreshGen.current||boundStorageKey!==activeStorageKeyRef.current;
+    const key=`${boundStorageKey}:inactive`; // captured from THIS identity
+    try{
+      const head=await getEventHead();
+      if(stale())return;
+
+      const[totalResult,pausedResult,matchedLogs,cancelledLogs,filledLogs]=await Promise.all([
         readContract('totalOrders'),
         readContract('paused'),
-        fetchEvents('OrderMatched'),
-        fetchEvents('OrderCancelled'),
-        fetchEvents('OrderFilled'),
+        fetchEvents('OrderMatched',head),
+        fetchEvents('OrderCancelled',head),
+        fetchEvents('OrderFilled',head)
       ]);
+      if(stale())return;
 
-      const totalCount = totalResult.data !== null ? Number(totalResult.data) : 0;
-      if (totalResult.data !== null) setTotalOrders(totalCount);
-      if (pausedResult.data !== null) setIsPaused(Boolean(pausedResult.data));
+      // all three must cover exactly the shared target head
+      const complete=[matchedLogs,cancelledLogs,filledLogs].every(l=>Array.isArray(l.data)&&l.coveredThrough===head);
 
-      // Track inactive order IDs directly from logs
-      const inactiveIds = new Set<number>();
+      if(complete){
+        const ids=new Set<number>();
 
-      if (matchedLogs.data && Array.isArray(matchedLogs.data)) {
-        matchedLogs.data.forEach((log: unknown) => {
-          const l = log as { args?: Record<string, unknown> | unknown[] };
-          const args = l.args || {};
-          const buyId = Number((args as Record<string, unknown>).buyOrderId ?? (args as unknown[])[0] ?? 0);
-          const sellId = Number((args as Record<string, unknown>).sellOrderId ?? (args as unknown[])[1] ?? 0);
-          if (buyId) inactiveIds.add(buyId);
-          if (sellId) inactiveIds.add(sellId);
+        // Parse OrderMatched, OrderCancelled and OrderFilled logs
+        matchedLogs.data!.forEach((log)=>{
+          const args=(log.args||[]) as unknown[];
+          const buyId=Number(args[0]??0);
+          const sellId=Number(args[1]??0);
+          if(buyId)ids.add(buyId);
+          if(sellId)ids.add(sellId);
         });
-      }
 
-      if (cancelledLogs.data && Array.isArray(cancelledLogs.data)) {
-        cancelledLogs.data.forEach((log: unknown) => {
-          const l = log as { args?: Record<string, unknown> | unknown[] };
-          const args = l.args || {};
-          const orderId = Number((args as Record<string, unknown>).orderId ?? (args as unknown[])[0] ?? 0);
-          if (orderId) inactiveIds.add(orderId);
+        cancelledLogs.data!.forEach((log)=>{
+          const args=(log.args||[]) as unknown[];
+          const orderId=Number(args[0]??0);
+          if(orderId)ids.add(orderId);
         });
-      }
 
-      if (filledLogs.data && Array.isArray(filledLogs.data)) {
-        filledLogs.data.forEach((log: unknown) => {
-          const l = log as { args?: Record<string, unknown> | unknown[] };
-          const args = l.args || {};
-          const orderId = Number((args as Record<string, unknown>).orderId ?? (args as unknown[])[0] ?? 0);
-          if (orderId) inactiveIds.add(orderId);
+        filledLogs.data!.forEach((log)=>{
+          const args=(log.args||[]) as unknown[];
+          const orderId=Number(args[0]??0);
+          if(orderId)ids.add(orderId);
         });
-      }
 
-      // Build Settled Matches History purely from real on-chain OrderMatched events
-      const parsedMatches: SettledMatch[] = [];
-      if (matchedLogs.data && Array.isArray(matchedLogs.data)) {
-        matchedLogs.data.forEach((log: unknown) => {
-          const l = log as { args?: Record<string, unknown> | unknown[]; transactionHash?: string };
-          const args = l.args || {};
-          const buyId = Number((args as Record<string, unknown>).buyOrderId ?? (args as unknown[])[0] ?? 0);
-          const sellId = Number((args as Record<string, unknown>).sellOrderId ?? (args as unknown[])[1] ?? 0);
-          const keeper = String((args as Record<string, unknown>).keeper ?? (args as unknown[])[2] ?? '');
-          const priceRaw = (args as Record<string, unknown>).settlementPrice ?? (args as unknown[])[3] ?? 0;
-          const qtyRaw = (args as Record<string, unknown>).executedQuantity ?? (args as unknown[])[4] ?? 0;
+        // Build parsedMatches using the existing history parser
+        const parsedMatches:SettledMatch[]=[];
+        matchedLogs.data!.forEach((log)=>{
+          const args=(log.args||[]) as unknown[];
+          const buyId=Number(args[0]??0);
+          const sellId=Number(args[1]??0);
+          const keeper=String(args[2]??'');
+          const priceRaw=args[3]??0;
+          const qtyRaw=args[4]??0;
 
-          const priceVal = parseRay(priceRaw);
-          const qtyNum = Number(qtyRaw);
-          const amountFormatted = qtyNum > 1e10 ? (qtyNum / 1e18).toFixed(4) : (qtyNum / 1e6).toFixed(2);
+          const priceVal=parseRay(priceRaw as number|string|bigint);
+          const qtyNum=Number(qtyRaw);
+          const amountFormatted=qtyNum>1e10?(qtyNum/1e18).toFixed(4):(qtyNum/1e6).toFixed(2);
 
           parsedMatches.push({
-            id: buyId,
-            buyOrderId: buyId,
-            sellOrderId: sellId,
-            pair: `Buy #${buyId} ↔ Sell #${sellId}`,
-            amount: amountFormatted,
-            price: `$${priceVal > 0 ? formatPrice(priceVal) : '3000'}`,
-            age: 'On-Chain Settled',
-            txHash: l.transactionHash || '',
-            keeper: keeper ? `${keeper.slice(0, 6)}...${keeper.slice(-4)}` : 'Keeper',
+            id:buyId,
+            buyOrderId:buyId,
+            sellOrderId:sellId,
+            pair:`Buy #${buyId} ↔ Sell #${sellId}`,
+            amount:amountFormatted,
+            price:`${priceVal>0?formatPrice(priceVal):'3000'}`,
+            age:'On-Chain Settled',
+            txHash:log.transactionHash||'',
+            keeper:keeper?`${keeper.slice(0,6)}...${keeper.slice(-4)}`:'Keeper',
           });
         });
+
+        if(stale())return;
+        inactiveRef.current={key,ids};
+        try{localStorage.setItem(key,JSON.stringify([...ids]));}catch{}
+        const history=parsedMatches.reverse();
+        setSettledHistory(history);
+        try{localStorage.setItem(`${boundStorageKey}:history`,JSON.stringify(history));}catch{}
+        setHistoryError(null);
+      }else{
+        if(stale())return;
+        setHistoryError('Event history incomplete. Previous successful data retained.');
       }
-      setSettledHistory(parsedMatches.reverse());
 
-      // Fetch on-chain orders 1..totalCount
-      if (totalCount > 0) {
-        const orderPromises = [];
-        for (let i = 1; i <= totalCount; i++) {
-          orderPromises.push(readContract('getOrder', [i]));
+      // continue order fetching with the last successful IDs for THIS identity
+      const inactiveIds=inactiveRef.current.key===key?inactiveRef.current.ids:new Set<number>();
+
+      const totalCount=totalResult.data!==null?Number(totalResult.data):0;
+      const fetchedOrders:Order[]=[];
+
+      if(totalCount>0){
+        const orderPromises=[];
+        for(let i=1;i<=totalCount;i++){
+          orderPromises.push(readContract('getOrder',[i]));
         }
-        const orderResults = await Promise.all(orderPromises);
-        const fetchedOrders: Order[] = [];
+        const orderResults=await Promise.all(orderPromises);
+        if(stale())return; // required after the order reads, before any setState
 
-        orderResults.forEach((res, idx) => {
-          if (!res.data) return;
-          const o = res.data as Record<string, unknown> | unknown[];
-          const id = Number((o as Record<string, unknown>).id ?? (o as unknown[])[0] ?? idx + 1);
-          const rawActive = Boolean((o as Record<string, unknown>).active ?? (o as unknown[])[3]);
-          const remainingInRaw = (o as Record<string, unknown>).remainingIn ?? (o as unknown[])[7] ?? 0;
-          const isBuy = Boolean((o as Record<string, unknown>).isBuy ?? (o as unknown[])[2]);
+        orderResults.forEach((res,idx)=>{
+          if(!res.data)return;
+          const o=res.data as Record<string,unknown>|unknown[];
+          const id=Number((o as Record<string,unknown>).id??(o as unknown[])[0]??idx+1);
+          const rawActive=Boolean((o as Record<string,unknown>).active??(o as unknown[])[3]);
+          const remainingInRaw=(o as Record<string,unknown>).remainingIn??(o as unknown[])[7]??0;
+          const isBuy=Boolean((o as Record<string,unknown>).isBuy??(o as unknown[])[2]);
 
-          const isActive =
-            rawActive &&
-            BigInt(remainingInRaw.toString()) > BigInt(0) &&
-            !inactiveIds.has(id);
+          const isActive=rawActive&&BigInt(remainingInRaw.toString())>BigInt(0)&&!inactiveIds.has(id);
 
-          const tokenInAddr = String((o as Record<string, unknown>).tokenIn ?? (o as unknown[])[4] ?? '');
-          const tokenOutAddr = String((o as Record<string, unknown>).tokenOut ?? (o as unknown[])[5] ?? '');
+          const tokenInAddr=String((o as Record<string,unknown>).tokenIn??(o as unknown[])[4]??'');
+          const tokenOutAddr=String((o as Record<string,unknown>).tokenOut??(o as unknown[])[5]??'');
 
-          const tokenInMeta = SUPPORTED_TOKENS.find(
-            (t) => chainId && t.addresses[chainId]?.toLowerCase() === tokenInAddr.toLowerCase()
+          const tokenInMeta=SUPPORTED_TOKENS.find(
+            (t)=>chainId&&t.addresses[chainId]?.toLowerCase()===tokenInAddr.toLowerCase()
           );
-          const tokenOutMeta = SUPPORTED_TOKENS.find(
-            (t) => chainId && t.addresses[chainId]?.toLowerCase() === tokenOutAddr.toLowerCase()
+          const tokenOutMeta=SUPPORTED_TOKENS.find(
+            (t)=>chainId&&t.addresses[chainId]?.toLowerCase()===tokenOutAddr.toLowerCase()
           );
 
-          const decimals = tokenInMeta?.decimals || (isBuy ? 18 : 6);
-          const amountInRaw = (o as Record<string, unknown>).amountIn ?? (o as unknown[])[6] ?? 0;
-          const amt = Number(amountInRaw.toString()) / 10 ** decimals;
-          const startPriceRaw = (o as Record<string, unknown>).startPrice ?? (o as unknown[])[8] ?? 0;
-          const startP = parseRay(startPriceRaw);
-          const slopeRaw = (o as Record<string, unknown>).slope ?? (o as unknown[])[9] ?? 0;
-          const slopeP = parseRay(slopeRaw);
-          const minPriceRaw = (o as Record<string, unknown>).minPrice ?? (o as unknown[])[10] ?? 0;
-          const minP = parseRay(minPriceRaw);
-          const maxPriceRaw = (o as Record<string, unknown>).maxPrice ?? (o as unknown[])[11] ?? 0;
-          const maxP = parseRay(maxPriceRaw);
-          const createdAtRaw = (o as Record<string, unknown>).createdAt ?? (o as unknown[])[12] ?? 0;
-          const expiryRaw = (o as Record<string, unknown>).expiry ?? (o as unknown[])[13] ?? 0;
-          const makerRaw = (o as Record<string, unknown>).maker ?? (o as unknown[])[1] ?? '';
+          const decimals=tokenInMeta?.decimals||(isBuy?18:6);
+          const amountInRaw=(o as Record<string,unknown>).amountIn??(o as unknown[])[6]??0;
+          const amt=Number(amountInRaw.toString())/10**decimals;
+          const startPriceRaw=(o as Record<string,unknown>).startPrice??(o as unknown[])[8]??0;
+          const startP=parseRay(startPriceRaw);
+          const slopeRaw=(o as Record<string,unknown>).slope??(o as unknown[])[9]??0;
+          const slopeP=parseRay(slopeRaw);
+          const minPriceRaw=(o as Record<string,unknown>).minPrice??(o as unknown[])[10]??0;
+          const minP=parseRay(minPriceRaw);
+          const maxPriceRaw=(o as Record<string,unknown>).maxPrice??(o as unknown[])[11]??0;
+          const maxP=parseRay(maxPriceRaw);
+          const createdAtRaw=(o as Record<string,unknown>).createdAt??(o as unknown[])[12]??0;
+          const expiryRaw=(o as Record<string,unknown>).expiry??(o as unknown[])[13]??0;
+          const makerRaw=(o as Record<string,unknown>).maker??(o as unknown[])[1]??'';
 
           fetchedOrders.push({
             id,
-            type: isBuy ? 'Buy' : 'Sell',
-            tokenIn: tokenInAddr,
-            tokenOut: tokenOutAddr,
-            tokenInSymbol: tokenInMeta?.symbol || (isBuy ? 'WETH' : 'USDC'),
-            tokenOutSymbol: tokenOutMeta?.symbol || (isBuy ? 'USDC' : 'WETH'),
-            amount: amt > 0 ? amt : isBuy ? 1 : 3000,
-            startPrice: startP,
-            currentPrice: startP,
-            slope: slopeP,
-            minPrice: minP,
-            maxPrice: maxP,
-            expiry: Number(expiryRaw.toString()),
-            createdAt: Number(createdAtRaw.toString() || Date.now() / 1000) * 1000,
-            active: isActive,
-            maker: String(makerRaw),
-            onChain: true,
+            type:isBuy?'Buy':'Sell',
+            tokenIn:tokenInAddr,
+            tokenOut:tokenOutAddr,
+            tokenInSymbol:tokenInMeta?.symbol||(isBuy?'WETH':'USDC'),
+            tokenOutSymbol:tokenOutMeta?.symbol||(isBuy?'USDC':'WETH'),
+            amount:amt>0?amt:isBuy?1:3000,
+            startPrice:startP,
+            currentPrice:startP,
+            slope:slopeP,
+            minPrice:minP,
+            maxPrice:maxP,
+            expiry:Number(expiryRaw.toString()),
+            createdAt:Number(createdAtRaw.toString()||Date.now()/1000)*1000,
+            active:isActive,
+            maker:String(makerRaw),
+            onChain:true,
           });
         });
-
-        setOrders(fetchedOrders);
       }
-    } catch (err) {
-      console.error('Error fetching on-chain data:', err);
-    } finally {
-      setIsLoadingOnChain(false);
-    }
-  }, [isReady, readContract, fetchEvents, chainId]);
 
-  useEffect(() => {
-    fetchOnChainData();
-    const interval = setInterval(fetchOnChainData, 4000);
-    return () => clearInterval(interval);
-  }, [fetchOnChainData]);
+      if(stale())return; // required after the order reads, before any setState
+      setOrders(fetchedOrders);
+      if(totalResult.data!==null)setTotalOrders(totalCount);
+      if(pausedResult.data!==null)setIsPaused(Boolean(pausedResult.data));
+    }finally{
+      if(!stale()){
+        refreshing.current=false;
+        setIsLoadingOnChain(false);
+      }
+    }
+  },[boundStorageKey,getEventHead,readContract,fetchEvents,isReady,contractAddress,chainId]);
+
+  const refreshRef=useRef<()=>Promise<void>>(refresh);
+  refreshRef.current=refresh;
+
+  const fetchOnChainData=useCallback(async()=>{
+    await refreshRef.current();
+  },[]);
+
+  // 2) polling
+  useEffect(()=>{
+    refresh().catch(()=>{});
+    const id=setInterval(()=>refresh().catch(()=>{}),POLL_MS);
+    return()=>{
+      clearInterval(id);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      refreshGen.current++;     // cancels a refresh that is mid-flight
+      refreshing.current=false;
+    };
+  },[storageKey,fetchEvents,getEventHead,readContract,refresh]);
 
   // ── Dynamic price calculation loop based on curve formula ─────────
   useEffect(() => {
@@ -1188,7 +1242,10 @@ export default function DashboardPage() {
             {/* Real On-Chain Settled Matches History */}
             <div className="border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 bg-white dark:bg-neutral-900 shadow-sm w-full">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-black dark:text-white">Settled Matches Log</h2>
+                <div>
+                  <h2 className="text-lg font-bold text-black dark:text-white">Settled Matches Log</h2>
+                  {historyError&&<p role="alert" className="text-xs text-amber-600 mt-0.5">{historyError}</p>}
+                </div>
                 <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                   Contract Event Stream
                 </span>

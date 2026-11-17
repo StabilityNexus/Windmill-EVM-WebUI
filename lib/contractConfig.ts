@@ -57,6 +57,7 @@ export interface ChainConfig {
   nativeCurrency: { name: string; symbol: string; decimals: number };
   contractAddress: string;
   wethAddress: string;
+  deployedBlock?:number;
 }
 
 export const SUPPORTED_CHAINS: Record<number, ChainConfig> = {
@@ -71,6 +72,7 @@ export const SUPPORTED_CHAINS: Record<number, ChainConfig> = {
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_LOCAL || '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
     wethAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+    deployedBlock:process.env.NEXT_PUBLIC_DEPLOYED_BLOCK_LOCAL?Number(process.env.NEXT_PUBLIC_DEPLOYED_BLOCK_LOCAL):undefined,
   },
   // ── Testnets ──
   11155111: {
@@ -83,6 +85,7 @@ export const SUPPORTED_CHAINS: Record<number, ChainConfig> = {
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_SEPOLIA || process.env.NEXT_PUBLIC_WINDMILL_EXCHANGE_ADDRESS || '0x96dce657ba9bd3db2533bbee0b2e2dbf334232d2',
     wethAddress: '0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9',
+    deployedBlock:process.env.NEXT_PUBLIC_DEPLOYED_BLOCK_SEPOLIA?Number(process.env.NEXT_PUBLIC_DEPLOYED_BLOCK_SEPOLIA):11466622,
   },
   // ── Mainnets ──
   1: {
