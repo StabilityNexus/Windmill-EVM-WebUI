@@ -120,6 +120,37 @@ export function useContract() {
     [provider, fullAddress, contractAddress]
   );
 
+  const waitForReceipt = useCallback(
+    async (
+      txHash: string,
+      { timeoutMs = 180_000, pollMs = 1_500 }: { timeoutMs?: number; pollMs?: number } = {}
+    ): Promise<{ status: 'success' | 'reverted' | 'timeout' | 'error'; error: string | null }> => {
+      if (!provider) {
+        return { status: 'error', error: 'Wallet not connected' };
+      }
+
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        try {
+          const receipt = (await provider.request({
+            method: 'eth_getTransactionReceipt',
+            params: [txHash],
+          })) as { status?: string } | null;
+
+          if (receipt) {
+            return receipt.status === '0x1'
+              ? { status: 'success', error: null }
+              : { status: 'reverted', error: 'Transaction reverted on-chain' };
+          }
+        } catch {}
+        await new Promise((r) => setTimeout(r, pollMs));
+      }
+
+      return { status: 'timeout', error: 'Timed out waiting for transaction confirmation' };
+    },
+    [provider]
+  );
+
   // ── Read ERC20 ────────────────────────────────────────────────────
   const readERC20 = useCallback(
     async (tokenAddress: string, method: string, args: unknown[] = []): Promise<ContractCallResult> => {
@@ -222,6 +253,7 @@ export function useContract() {
     canRead: !!contractAddress,
     readContract,
     writeContract,
+    waitForReceipt,
     readERC20,
     approveERC20,
     fetchEvents,

@@ -77,7 +77,7 @@ function formatPrice(val: number): string {
 
 export default function DashboardPage() {
   const { isConnected, setWalletModalOpen, fullAddress, chainId, network } = useWallet();
-  const { contractAddress, rpcUrl, writeContract, readContract, readERC20, approveERC20, fetchEvents, isReady } = useContract();
+  const { contractAddress, rpcUrl, writeContract, waitForReceipt, readContract, readERC20, approveERC20, fetchEvents, isReady } = useContract();
 
   // ── Form State ────────────────────────────────────────────────────
   const [orderType, setOrderType] = useState<'Buy' | 'Sell'>('Buy');
@@ -469,13 +469,19 @@ export default function DashboardPage() {
             setTxStatus('Requesting ERC-20 approval...');
             const maxApproval = '0x' + 'f'.repeat(64);
             const approveResult = await approveERC20(tokenInAddr, contractAddress!, maxApproval);
-            if (approveResult.error) {
-              setTxStatus(`Approval error: ${approveResult.error}`);
+            if (approveResult.error || !approveResult.txHash) {
+              setTxStatus(`Approval error: ${approveResult.error ?? 'No transaction hash returned'}`);
+              setIsSubmitting(false);
+              return;
+            }
+            setTxStatus('Waiting for approval to be confirmed on-chain...');
+            const approval = await waitForReceipt(approveResult.txHash);
+            if (approval.status !== 'success') {
+              setTxStatus(`Approval not confirmed: ${approval.error}`);
               setIsSubmitting(false);
               return;
             }
             setTxStatus('Approval confirmed. Submitting order...');
-            await new Promise((r) => setTimeout(r, 2000));
           }
 
           setTxStatus('Submitting order to Windmill Exchange contract...');
@@ -491,13 +497,21 @@ export default function DashboardPage() {
             orderType === 'Buy',
           ]);
 
-          if (error) {
-            setTxStatus(`Transaction error: ${error}`);
+          if (error || !txHash) {
+            setTxStatus(`Transaction error: ${error ?? 'No transaction hash returned'}`);
             setIsSubmitting(false);
             return;
           }
 
-          setTxStatus(`Order deployed on-chain! Tx: ${txHash?.slice(0, 10)}...`);
+          setTxStatus(`Order submitted. Waiting for confirmation... Tx: ${txHash.slice(0, 10)}...`);
+          const confirmation = await waitForReceipt(txHash);
+          if (confirmation.status !== 'success') {
+            setTxStatus(`Order not confirmed: ${confirmation.error}. Tx: ${txHash.slice(0, 10)}...`);
+            setIsSubmitting(false);
+            return;
+          }
+
+          setTxStatus(`Order deployed on-chain! Tx: ${txHash.slice(0, 10)}...`);
           setIsSubmitting(false);
           setAmount(1);
           fetchOnChainData();
