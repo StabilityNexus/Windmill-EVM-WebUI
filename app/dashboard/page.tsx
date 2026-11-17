@@ -196,8 +196,11 @@ export default function DashboardPage() {
   // Detect Matchable Crossover Pairs on-chain
   const matchablePairs = useMemo(() => {
     const pairs: Array<{ buy: Order; sell: Order }> = [];
-    const activeBuys = allActiveOrders.filter((o) => o.type === 'Buy');
-    const activeSells = allActiveOrders.filter((o) => o.type === 'Sell');
+    // Expired orders stay active on-chain until cancelled, but matchOrders reverts with OrderExpired
+    const now = Math.floor(Date.now() / 1000);
+    const live = allActiveOrders.filter((o) => !o.expiry || o.expiry >= now);
+    const activeBuys = live.filter((o) => o.type === 'Buy');
+    const activeSells = live.filter((o) => o.type === 'Sell');
 
     for (const buy of activeBuys) {
       for (const sell of activeSells) {
