@@ -15,6 +15,7 @@ interface Order {
   tokenInSymbol: string;
   tokenOutSymbol: string;
   amount: number;
+  remaining: number;
   startPrice: number;
   currentPrice: number;
   slope: number;
@@ -240,17 +241,6 @@ export default function DashboardPage() {
       // Track inactive order IDs directly from logs
       const inactiveIds = new Set<number>();
 
-      if (matchedLogs.data && Array.isArray(matchedLogs.data)) {
-        matchedLogs.data.forEach((log: unknown) => {
-          const l = log as { args?: Record<string, unknown> | unknown[] };
-          const args = l.args || {};
-          const buyId = Number((args as Record<string, unknown>).buyOrderId ?? (args as unknown[])[0] ?? 0);
-          const sellId = Number((args as Record<string, unknown>).sellOrderId ?? (args as unknown[])[1] ?? 0);
-          if (buyId) inactiveIds.add(buyId);
-          if (sellId) inactiveIds.add(sellId);
-        });
-      }
-
       if (cancelledLogs.data && Array.isArray(cancelledLogs.data)) {
         cancelledLogs.data.forEach((log: unknown) => {
           const l = log as { args?: Record<string, unknown> | unknown[] };
@@ -335,6 +325,7 @@ export default function DashboardPage() {
           const decimals = tokenInMeta?.decimals || (isBuy ? 18 : 6);
           const amountInRaw = (o as Record<string, unknown>).amountIn ?? (o as unknown[])[6] ?? 0;
           const amt = Number(amountInRaw.toString()) / 10 ** decimals;
+          const remaining = Number(remainingInRaw.toString()) / 10 ** decimals;
           const startPriceRaw = (o as Record<string, unknown>).startPrice ?? (o as unknown[])[8] ?? 0;
           const startP = parseRay(startPriceRaw);
           const slopeRaw = (o as Record<string, unknown>).slope ?? (o as unknown[])[9] ?? 0;
@@ -355,6 +346,7 @@ export default function DashboardPage() {
             tokenInSymbol: tokenInMeta?.symbol || (isBuy ? 'WETH' : 'USDC'),
             tokenOutSymbol: tokenOutMeta?.symbol || (isBuy ? 'USDC' : 'WETH'),
             amount: amt > 0 ? amt : isBuy ? 1 : 3000,
+            remaining,
             startPrice: startP,
             currentPrice: startP,
             slope: slopeP,
@@ -1140,8 +1132,16 @@ export default function DashboardPage() {
                               Maker: {order.maker.slice(0, 6)}...{order.maker.slice(-4)}
                             </span>
                             <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                              {order.amount} {order.tokenInSymbol} ➔ {order.tokenOutSymbol}
+                              {order.remaining > 0 && order.remaining < order.amount
+                                ? `${order.remaining} / ${order.amount}`
+                                : order.amount}{' '}
+                              {order.tokenInSymbol} ➔ {order.tokenOutSymbol}
                             </span>
+                            {order.remaining > 0 && order.remaining < order.amount && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 font-bold uppercase">
+                                Partially Filled
+                              </span>
+                            )}
                           </div>
 
                           <div className="flex flex-col gap-0.5 text-xs text-neutral-500 dark:text-neutral-400 mt-1">
