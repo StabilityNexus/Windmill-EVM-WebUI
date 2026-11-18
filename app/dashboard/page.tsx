@@ -15,6 +15,8 @@ interface Order {
   tokenInSymbol: string;
   tokenOutSymbol: string;
   amount: number;
+  remaining: string;
+  isPartiallyFilled: boolean;
   startPrice: number;
   currentPrice: number;
   slope: number;
@@ -67,6 +69,13 @@ function toRayString(val: number): string {
   const scale18 = BigInt('1000000000000000000');
   const combined = BigInt(intPart) * scale27 + BigInt(decPart) * scale18;
   return (isNeg ? '-' : '') + combined.toString();
+}
+
+function formatUnitsExact(raw: bigint, decimals: number): string {
+  const base = BigInt(10) ** BigInt(decimals);
+  const whole = raw / base;
+  const frac = (raw % base).toString().padStart(decimals, '0').replace(/0+$/, '');
+  return frac ? `${whole}.${frac}` : whole.toString();
 }
 
 function formatPrice(val: number): string {
@@ -240,17 +249,6 @@ export default function DashboardPage() {
       // Track inactive order IDs directly from logs
       const inactiveIds = new Set<number>();
 
-      if (matchedLogs.data && Array.isArray(matchedLogs.data)) {
-        matchedLogs.data.forEach((log: unknown) => {
-          const l = log as { args?: Record<string, unknown> | unknown[] };
-          const args = l.args || {};
-          const buyId = Number((args as Record<string, unknown>).buyOrderId ?? (args as unknown[])[0] ?? 0);
-          const sellId = Number((args as Record<string, unknown>).sellOrderId ?? (args as unknown[])[1] ?? 0);
-          if (buyId) inactiveIds.add(buyId);
-          if (sellId) inactiveIds.add(sellId);
-        });
-      }
-
       if (cancelledLogs.data && Array.isArray(cancelledLogs.data)) {
         cancelledLogs.data.forEach((log: unknown) => {
           const l = log as { args?: Record<string, unknown> | unknown[] };
@@ -335,6 +333,10 @@ export default function DashboardPage() {
           const decimals = tokenInMeta?.decimals || (isBuy ? 18 : 6);
           const amountInRaw = (o as Record<string, unknown>).amountIn ?? (o as unknown[])[6] ?? 0;
           const amt = Number(amountInRaw.toString()) / 10 ** decimals;
+          const remainingInBig = BigInt(remainingInRaw.toString());
+          const amountInBig = BigInt(amountInRaw.toString());
+          const remaining = formatUnitsExact(remainingInBig, decimals);
+          const isPartiallyFilled = remainingInBig > BigInt(0) && remainingInBig < amountInBig;
           const startPriceRaw = (o as Record<string, unknown>).startPrice ?? (o as unknown[])[8] ?? 0;
           const startP = parseRay(startPriceRaw);
           const slopeRaw = (o as Record<string, unknown>).slope ?? (o as unknown[])[9] ?? 0;
@@ -355,6 +357,8 @@ export default function DashboardPage() {
             tokenInSymbol: tokenInMeta?.symbol || (isBuy ? 'WETH' : 'USDC'),
             tokenOutSymbol: tokenOutMeta?.symbol || (isBuy ? 'USDC' : 'WETH'),
             amount: amt > 0 ? amt : isBuy ? 1 : 3000,
+            remaining,
+            isPartiallyFilled,
             startPrice: startP,
             currentPrice: startP,
             slope: slopeP,
@@ -1140,8 +1144,16 @@ export default function DashboardPage() {
                               Maker: {order.maker.slice(0, 6)}...{order.maker.slice(-4)}
                             </span>
                             <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                              {order.amount} {order.tokenInSymbol} ➔ {order.tokenOutSymbol}
+                              {order.isPartiallyFilled
+                                ? `${order.remaining} / ${order.amount}`
+                                : order.amount}{' '}
+                              {order.tokenInSymbol} ➔ {order.tokenOutSymbol}
                             </span>
+                            {order.isPartiallyFilled && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 font-bold uppercase">
+                                Partially Filled
+                              </span>
+                            )}
                           </div>
 
                           <div className="flex flex-col gap-0.5 text-xs text-neutral-500 dark:text-neutral-400 mt-1">
