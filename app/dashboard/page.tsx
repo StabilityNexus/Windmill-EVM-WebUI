@@ -39,6 +39,8 @@ interface SettledMatch {
   keeper: string;
 }
 
+const IS_STATIC_EXPORT = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+
 function parseRay(raw: unknown): number {
   if (raw === undefined || raw === null || raw === '') return 0;
   try {
@@ -573,27 +575,29 @@ export default function DashboardPage() {
       try {
         let matchedSuccess = false;
 
-        // 1. Attempt autonomous keeper backend settlement
-        try {
-          const res = await fetch('/api/keeper', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'match',
-              buyOrderId,
-              sellOrderId,
-              contractAddress,
-              rpcUrl,
-            }),
-          });
-          const data = await res.json().catch(() => ({}));
-          if (res.ok && data.ok) {
-            matchedSuccess = true;
-            setTxStatus(`Orders matched automatically on-chain! Tx: ${data.txHash?.slice(0, 10)}...`);
-            await fetchOnChainData();
+        // 1. Attempt autonomous keeper backend settlement when a server is available.
+        if (!IS_STATIC_EXPORT) {
+          try {
+            const res = await fetch('/api/keeper', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'match',
+                buyOrderId,
+                sellOrderId,
+                contractAddress,
+                rpcUrl,
+              }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.ok) {
+              matchedSuccess = true;
+              setTxStatus(`Orders matched automatically on-chain! Tx: ${data.txHash?.slice(0, 10)}...`);
+              await fetchOnChainData();
+            }
+          } catch (backendErr) {
+            console.warn('Keeper API auto-match attempt failed, falling back to wallet:', backendErr);
           }
-        } catch (backendErr) {
-          console.warn('Keeper API auto-match attempt failed, falling back to wallet:', backendErr);
         }
 
         // 2. If backend settlement didn't execute and user wallet is connected, fallback to wallet contract call
