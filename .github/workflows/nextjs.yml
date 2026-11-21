@@ -74,7 +74,13 @@ jobs:
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
       - name: Build with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next build
+        run: |
+          keeper_route_backup="$(mktemp)"
+          mv app/api/keeper/route.ts "$keeper_route_backup"
+          trap 'mv "$keeper_route_backup" app/api/keeper/route.ts' EXIT
+          ${{ steps.detect-package-manager.outputs.runner }} next build
+        env:
+          NEXT_PUBLIC_STATIC_EXPORT: "true"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
