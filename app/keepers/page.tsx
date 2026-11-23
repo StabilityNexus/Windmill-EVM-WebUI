@@ -7,6 +7,8 @@ import { useContract } from '@/hooks/useContract';
 import { Monitor, Activity, Zap, CheckCircle2, Percent, Fuel, Search, RefreshCw, Play, Square, Terminal, Loader2 } from 'lucide-react';
 import CodeBlock from '@/components/ui/CodeBlock';
 
+const IS_STATIC_EXPORT = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+
 // ── Keeper Bot Panel (local process control) ────────────────────────────
 function KeeperBotPanel() {
   const [running, setRunning] = useState(false);
@@ -25,6 +27,8 @@ function KeeperBotPanel() {
 
   // Poll status + logs
   const fetchStatus = useCallback(async () => {
+    if (IS_STATIC_EXPORT) return;
+
     try {
       const res = await fetch('/api/keeper');
       if (!res.ok) return;
@@ -40,6 +44,7 @@ function KeeperBotPanel() {
 
   // Initial fetch on mount
   useEffect(() => {
+    if (IS_STATIC_EXPORT) return;
     fetchStatus();
   }, [fetchStatus]);
 
@@ -127,7 +132,12 @@ function KeeperBotPanel() {
 
         {/* Status badge */}
         <div className="flex items-center gap-2">
-          {running ? (
+          {IS_STATIC_EXPORT ? (
+            <span className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider bg-amber-50 dark:bg-amber-950/60 px-3 py-1.5 rounded-full">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Server Required
+            </span>
+          ) : running ? (
             <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-full">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Running
@@ -159,6 +169,11 @@ function KeeperBotPanel() {
         </div>
       )}
 
+      {IS_STATIC_EXPORT ? (
+        <p className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+          Keeper process controls require a server deployment. You can still run a keeper using the guide below.
+        </p>
+      ) : <>
       {/* Start / Stop button */}
       <div className="flex gap-3 mb-5">
         {!running ? (
@@ -224,6 +239,7 @@ function KeeperBotPanel() {
         )}
         <div ref={logEndRef} />
       </div>
+      </>}
     </div>
   );
 }
@@ -243,6 +259,8 @@ export default function KeepersPage() {
 
   // Poll keeper status from API
   useEffect(() => {
+    if (IS_STATIC_EXPORT) return;
+
     const checkKeeperStatus = async () => {
       try {
         const res = await fetch('/api/keeper');
@@ -314,7 +332,7 @@ export default function KeepersPage() {
 
   // Dynamic Statistics
   const dynamicKeeperStats = [
-    { label: 'Keeper Process', value: keeperRunning ? 'Running' : 'Stopped', icon: Monitor, highlight: keeperRunning },
+    { label: 'Keeper Process', value: IS_STATIC_EXPORT ? 'Server required' : keeperRunning ? 'Running' : 'Stopped', icon: Monitor, highlight: keeperRunning },
     { label: 'Network Node', value: isReady ? 'Connected' : 'Ready', icon: Activity },
     { label: 'Sweep Latency', value: '15s Loop', icon: Zap },
     { label: 'Contract Orders', value: totalOrders !== null ? totalOrders.toString() : '0', icon: CheckCircle2 },
