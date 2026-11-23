@@ -77,7 +77,7 @@ function formatPrice(val: number): string {
 
 export default function DashboardPage() {
   const { isConnected, setWalletModalOpen, fullAddress, chainId, network } = useWallet();
-  const { contractAddress, rpcUrl, writeContract, waitForReceipt, readContract, readERC20, approveERC20, fetchEvents, isReady } = useContract();
+  const { contractAddress, writeContract, waitForReceipt, readContract, readERC20, approveERC20, fetchEvents, isReady } = useContract();
 
   // ── Form State ────────────────────────────────────────────────────
   const [orderType, setOrderType] = useState<'Buy' | 'Sell'>('Buy');
@@ -573,27 +573,28 @@ export default function DashboardPage() {
       try {
         let matchedSuccess = false;
 
-        // 1. Attempt autonomous keeper backend settlement
-        try {
-          const res = await fetch('/api/keeper', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'match',
-              buyOrderId,
-              sellOrderId,
-              contractAddress,
-              rpcUrl,
-            }),
-          });
-          const data = await res.json().catch(() => ({}));
-          if (res.ok && data.ok) {
-            matchedSuccess = true;
-            setTxStatus(`Orders matched automatically on-chain! Tx: ${data.txHash?.slice(0, 10)}...`);
-            await fetchOnChainData();
+        // 1. Attempt autonomous keeper backend settlement; the server resolves RPC and contract from chainId
+        if (chainId) {
+          try {
+            const res = await fetch('/api/keeper', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'match',
+                buyOrderId,
+                sellOrderId,
+                chainId,
+              }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.ok) {
+              matchedSuccess = true;
+              setTxStatus(`Orders matched automatically on-chain! Tx: ${data.txHash?.slice(0, 10)}...`);
+              await fetchOnChainData();
+            }
+          } catch (backendErr) {
+            console.warn('Keeper API auto-match attempt failed, falling back to wallet:', backendErr);
           }
-        } catch (backendErr) {
-          console.warn('Keeper API auto-match attempt failed, falling back to wallet:', backendErr);
         }
 
         // 2. If backend settlement didn't execute and user wallet is connected, fallback to wallet contract call
@@ -623,7 +624,7 @@ export default function DashboardPage() {
         setTimeout(() => setTxStatus(null), 6000);
       }
     },
-    [contractAddress, rpcUrl, isConnected, isReady, writeContract, fetchOnChainData]
+    [chainId, isConnected, isReady, writeContract, fetchOnChainData]
   );
 
   // ── Automatic Matching Loop for Crossing Opportunities (Strictly Autonomous) ──

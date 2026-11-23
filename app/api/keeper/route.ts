@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn, type ChildProcess } from "child_process";
 import path from "path";
+import { SUPPORTED_CHAINS } from "@/lib/contractConfig";
 
 export const dynamic = "force-dynamic";
+
+// The route signs with a server key and controls a local process, so it only
+// runs under `next dev` with an explicit opt-in. Production servers return 404.
+function isKeeperApiEnabled() {
+  return (
+    process.env.ENABLE_KEEPER_API === "true" &&
+    process.env.NODE_ENV !== "production"
+  );
+}
+
+function notFound() {
+  return NextResponse.json({ ok: false, error: "Not found." }, { status: 404 });
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) > 0;
+}
 
 // ── In-memory keeper process state ──────────────────────────────────────
 // Persists across requests for the lifetime of the Next.js dev server.
@@ -33,67 +51,66 @@ function pushLog(line: string) {
 
 // ── POST /api/keeper  →  start or stop keeper, or execute match ─────────
 export async function POST(request: NextRequest) {
+  if (!isKeeperApiEnabled()) return notFound();
+
+  // A JSON content type forces a CORS preflight, so other sites cannot post here.
+  if (!request.headers.get("content-type")?.startsWith("application/json")) {
+    return NextResponse.json(
+      { ok: false, error: "Content-Type must be application/json." },
+      { status: 415 }
+    );
+  }
+
   const body = await request.json().catch(() => ({}));
-  const action: string = body.action ?? "start";
+  const action: unknown = body.action;
 
   // ── MATCH ORDERS ON-CHAIN ─────────────────────────────────────────────
   if (action === "match") {
-    const buyOrderId = body.buyOrderId;
-    const sellOrderId = body.sellOrderId;
-    if (!buyOrderId || !sellOrderId) {
+    const { buyOrderId, sellOrderId, chainId } = body;
+    if (!isPositiveInteger(buyOrderId) || !isPositiveInteger(sellOrderId)) {
       return NextResponse.json(
-        { ok: false, error: "Missing buyOrderId or sellOrderId" },
+        { ok: false, error: "buyOrderId and sellOrderId must be positive integers." },
         { status: 400 }
+      );
+    }
+
+    // RPC and contract come from the app's chain config, never from the request.
+    const chain = isPositiveInteger(chainId) ? SUPPORTED_CHAINS[chainId] : undefined;
+    if (!chain || !chain.contractAddress) {
+      return NextResponse.json(
+        { ok: false, error: "Unsupported chainId." },
+        { status: 400 }
+      );
+    }
+
+    const privateKey = process.env.KEEPER_PRIVATE_KEY || process.env.PRIVATE_KEY;
+    if (!privateKey) {
+      return NextResponse.json(
+        { ok: false, error: "Keeper key is not configured." },
+        { status: 503 }
       );
     }
 
     try {
       const { ethers } = await import("ethers");
-      const rpcUrl =
-        body.rpcUrl ||
-        process.env.NEXT_PUBLIC_RPC_URL ||
-        process.env.RPC_URL ||
-        "http://127.0.0.1:8545";
-      const contractAddress =
-        body.contractAddress ||
-        process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_LOCAL ||
-        process.env.CONTRACT_ADDRESS ||
-        "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
-      const privateKey =
-        process.env.KEEPER_PRIVATE_KEY ||
-        process.env.PRIVATE_KEY ||
-        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-
-      const provider = new ethers.JsonRpcProvider(rpcUrl);
+      const provider = new ethers.JsonRpcProvider(chain.rpcUrl, chain.chainId, {
+        staticNetwork: true,
+      });
       const signer = new ethers.Wallet(privateKey, provider);
       const abi = [
         "function matchOrders(uint256 buyOrderId, uint256 sellOrderId, uint256 deadline) external",
       ];
-      const contract = new ethers.Contract(contractAddress, abi, signer);
+      const contract = new ethers.Contract(chain.contractAddress, abi, signer);
       const deadline = Math.floor(Date.now() / 1000) + 3600;
 
-      console.log('\n===============================================================');
-      console.log('⚡ [AUTONOMOUS MATCH ENGINE] Crossing Order Pair Detected!');
-      console.log(`🚀 STRICTLY AUTO-EXECUTING MATCH ON-CHAIN: Buy #${buyOrderId} ↔ Sell #${sellOrderId}`);
-      console.log(`📍 Contract: ${contractAddress}`);
-      console.log(`🌐 RPC URL:  ${rpcUrl}`);
-      console.log('===============================================================');
-      pushLog(`[api] Autonomous match requested: Buy #${buyOrderId} ↔ Sell #${sellOrderId}`);
+      pushLog(`[api] Autonomous match requested: Buy #${buyOrderId} ↔ Sell #${sellOrderId} on ${chain.shortName}`);
 
-      let tx;
-      try {
-        tx = await contract.matchOrders(buyOrderId, sellOrderId, deadline);
-      } catch {
-        tx = await contract.matchOrders(buyOrderId, sellOrderId, deadline, { gasLimit: BigInt(800000) });
-      }
+      // Simulate first so a match that would revert is never sent.
+      await contract.matchOrders.staticCall(buyOrderId, sellOrderId, deadline);
+      const tx = await contract.matchOrders(buyOrderId, sellOrderId, deadline);
       const receipt = await tx.wait();
       const txHash = receipt?.hash || tx.hash;
 
-      console.log('\n🎉 [MATCH EXECUTED ON-CHAIN SUCCESSFULLY!]');
-      console.log(`🔗 Transaction Hash: ${txHash}`);
-      console.log(`✅ Settled: Buy #${buyOrderId} ↔ Sell #${sellOrderId}`);
-      console.log('💰 0.1% Keeper Matching Fee Awarded!');
-      console.log('===============================================================\n');
       pushLog(`[api] Autonomous match successful: Buy #${buyOrderId} ↔ Sell #${sellOrderId} (tx: ${txHash})`);
 
       return NextResponse.json({
@@ -105,8 +122,18 @@ export async function POST(request: NextRequest) {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       pushLog(`[api] Autonomous match error for Buy #${buyOrderId} ↔ Sell #${sellOrderId}: ${msg}`);
-      return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+      return NextResponse.json(
+        { ok: false, error: "Match failed." },
+        { status: 500 }
+      );
     }
+  }
+
+  if (action !== "start" && action !== "stop") {
+    return NextResponse.json(
+      { ok: false, error: "Unknown action." },
+      { status: 400 }
+    );
   }
 
   // ── STOP ──────────────────────────────────────────────────────────────
@@ -147,8 +174,7 @@ export async function POST(request: NextRequest) {
   const fileName = ["src", "index.js"].join("/");
   const entryPoint = String(path.resolve(keeperDir, fileName));
 
-  pushLog(`[api] Spawning keeper from ${keeperDir}`);
-  pushLog(`[api] Entry: ${entryPoint}`);
+  pushLog("[api] Spawning keeper");
 
   try {
     const child = spawn("node", [entryPoint], {
@@ -203,7 +229,7 @@ export async function POST(request: NextRequest) {
     const message = err instanceof Error ? err.message : String(err);
     pushLog(`[api] Failed to spawn keeper: ${message}`);
     return NextResponse.json(
-      { ok: false, error: `Failed to spawn keeper: ${message}` },
+      { ok: false, error: "Failed to spawn keeper." },
       { status: 500 }
     );
   }
@@ -211,6 +237,8 @@ export async function POST(request: NextRequest) {
 
 // ── GET /api/keeper  →  return current status + recent logs ─────────────
 export async function GET() {
+  if (!isKeeperApiEnabled()) return notFound();
+
   return NextResponse.json({
     running: keeper.running,
     pid: keeper.pid,
