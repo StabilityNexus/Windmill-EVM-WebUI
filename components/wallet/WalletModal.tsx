@@ -2,7 +2,7 @@
 
 import React, { useEffect, useId, useRef, useCallback } from 'react';
 import { useWallet } from '@/context/WalletContext';
-import { Wallet, Shield, Sparkles, Link2, Key, ArrowRight, X } from 'lucide-react';
+import { Wallet, Shield, Sparkles, Link2, Key, ArrowRight, X, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 // ─── Externalized Labels (ready for i18n adoption) ──────────────
@@ -17,6 +17,8 @@ export default function WalletModal() {
     isConnecting,
     connectingWallet,
     connectWallet,
+    walletError,
+    clearWalletError,
   } = useWallet();
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -27,6 +29,7 @@ export default function WalletModal() {
     if (!walletModalOpen) {
       previousFocusRef.current?.focus();
       previousFocusRef.current = null;
+      clearWalletError();
       return;
     }
 
@@ -40,7 +43,7 @@ export default function WalletModal() {
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [walletModalOpen, isConnecting, setWalletModalOpen]);
+  }, [walletModalOpen, isConnecting, setWalletModalOpen, clearWalletError]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -141,6 +144,15 @@ export default function WalletModal() {
         ) : (
           /* Selection Screen */
           <div className="flex flex-col gap-3">
+            {walletError && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <p>{walletError}</p>
+              </div>
+            )}
             {wallets.map((wallet) => {
               const WalletIcon = wallet.icon;
               return (

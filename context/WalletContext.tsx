@@ -29,11 +29,13 @@ interface WalletContextType {
   network: string;
   walletModalOpen: boolean;
   hasWallet: boolean;
+  walletError: string | null;
 
   // Actions
   setWalletModalOpen: (open: boolean) => void;
   connectWallet: (walletName: string) => Promise<void>;
   disconnectWallet: () => void;
+  clearWalletError: () => void;
   switchNetwork: (networkName: string) => void;
   switchChain: (chainId: number) => Promise<void>;
 
@@ -60,6 +62,21 @@ function networkNameToChainId(name: string): number {
   return entry?.chainId ?? DEFAULT_CHAIN_ID;
 }
 
+function getWalletErrorMessage(err: unknown): string {
+  const code =
+    typeof err === 'object' && err !== null && 'code' in err
+      ? (err as { code?: number }).code
+      : undefined;
+
+  if (code === -32002) {
+    return 'A connection request is already pending. Check your wallet extension and approve or dismiss the existing prompt.';
+  }
+  if (code === 4001) {
+    return 'Connection rejected. Approve the request in your wallet to connect.';
+  }
+  return 'Connection failed. Please try again.';
+}
+
 // ─── Provider Component ─────────────────────────────────────────────
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
@@ -69,6 +86,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [chainId, setChainId] = useState<number | null>(null);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [hasWallet, setHasWallet] = useState(false);
+  const [walletError, setWalletError] = useState<string | null>(null);
 
   const address = fullAddress ? shortenAddress(fullAddress) : null;
   const network = chainId ? chainIdToNetworkName(chainId) : 'Ethereum';
@@ -138,8 +156,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const connectWallet = useCallback(async (walletName: string) => {
     const eth = typeof window !== 'undefined' ? window.ethereum : undefined;
 
+    setWalletError(null);
+
     if (!eth) {
-      alert(`No Web3 provider found. Please install a Web3 wallet extension (such as MetaMask, Rabby, or Coinbase Wallet) to connect.`);
+      setWalletError(
+        'No Web3 provider found. Please install a Web3 wallet extension (such as MetaMask, Rabby, or Coinbase Wallet) to connect.'
+      );
       setIsConnecting(false);
       setConnectingWallet(null);
       return;
@@ -163,11 +185,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
       setWalletModalOpen(false);
     } catch (err) {
-      console.error('Wallet connection failed:', err);
+      setWalletError(getWalletErrorMessage(err));
     } finally {
       setIsConnecting(false);
       setConnectingWallet(null);
     }
+  }, []);
+
+  const clearWalletError = useCallback(() => {
+    setWalletError(null);
   }, []);
 
   // ── Disconnect ────────────────────────────────────────────────────
@@ -250,9 +276,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           network,
           walletModalOpen,
           hasWallet,
+          walletError,
           setWalletModalOpen,
           connectWallet,
           disconnectWallet,
+          clearWalletError,
           switchNetwork,
           switchChain,
           provider: typeof window !== 'undefined' ? window.ethereum ?? null : null,
@@ -267,8 +295,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           network,
           walletModalOpen,
           hasWallet,
+          walletError,
           connectWallet,
           disconnectWallet,
+          clearWalletError,
           switchNetwork,
           switchChain,
         ]
