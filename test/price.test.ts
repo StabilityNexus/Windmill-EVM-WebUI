@@ -6,6 +6,7 @@ import {
   getOrderPriceOrientation,
   isSlopeWithinContractLimit,
   MAX_SLOPE_RAY,
+  normalizeOptionalPrice,
   priceFromRay,
   priceToRay,
 } from '../lib/price';
@@ -27,6 +28,13 @@ describe('RAY price conversion', () => {
   it('uses the same scale for slopes and bounds', () => {
     assert.equal(priceToRay(-0.2, 18, 6), BigInt('-200000000000000'));
     assert.equal(priceToRay(0, 18, 6), BigInt(0));
+  });
+
+  it('treats blank optional bounds as zero without changing real values', () => {
+    assert.equal(normalizeOptionalPrice(''), '0');
+    assert.equal(normalizeOptionalPrice('   '), '0');
+    assert.equal(normalizeOptionalPrice(' 2500 '), ' 2500 ');
+    assert.equal(priceToRay(normalizeOptionalPrice(''), 18, 6), BigInt(0));
   });
 
   it('preserves the standard RAY scale for equal-decimal pairs', () => {

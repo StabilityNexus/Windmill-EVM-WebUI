@@ -9,6 +9,7 @@ import {
   getOrderPriceOrientation,
   isSlopeWithinContractLimit,
   MAX_SLOPE_RAY,
+  normalizeOptionalPrice,
   priceFromRay,
   priceToRay,
 } from '@/lib/price';
@@ -42,6 +43,7 @@ interface Order {
   active: boolean;
   maker: string;
   onChain: boolean;
+  deploymentId: string | null;
 }
 
 interface SettledMatch {
@@ -97,6 +99,10 @@ function formatOrderPrice(order: Order, value: number): string {
 export default function DashboardPage() {
   const { isConnected, setWalletModalOpen, fullAddress, chainId, network } = useWallet();
   const { contractAddress, rpcUrl, writeContract, readContract, readERC20, approveERC20, fetchEvents, isReady } = useContract();
+  const deploymentId = useMemo(
+    () => (chainId && contractAddress ? `${chainId}:${contractAddress.toLowerCase()}` : null),
+    [chainId, contractAddress]
+  );
 
   // ── Form State ────────────────────────────────────────────────────
   const [orderType, setOrderType] = useState<'Buy' | 'Sell'>('Buy');
@@ -131,6 +137,19 @@ export default function DashboardPage() {
   // Auto-match is permanently and strictly active
   const [matchingPairKeys, setMatchingPairKeys] = useState<Set<string>>(new Set());
   const inFlightMatchesRef = useRef<Set<string>>(new Set());
+  const ordersRef = useRef<Order[]>([]);
+  ordersRef.current = orders;
+  const deploymentIdRef = useRef<string | null>(deploymentId);
+  deploymentIdRef.current = deploymentId;
+
+  useEffect(() => {
+    setOrders([]);
+    setSettledHistory([]);
+    setTotalOrders(null);
+    setIsPaused(false);
+    setMatchingPairKeys(new Set());
+    inFlightMatchesRef.current.clear();
+  }, [deploymentId]);
 
   // ── Available tokens for current chain ────────────────────────────
   const availableTokens = useMemo(() => {
@@ -227,8 +246,8 @@ export default function DashboardPage() {
   // ── Persistent refs to prevent state overwrites on polling ──────
 
   const allActiveOrders = useMemo(() => {
-    return orders.filter((o) => o.active);
-  }, [orders]);
+    return orders.filter((o) => o.active && o.deploymentId === deploymentId);
+  }, [orders, deploymentId]);
 
   // Detect Matchable Crossover Pairs on-chain
   const matchablePairs = useMemo(() => {
@@ -264,7 +283,8 @@ export default function DashboardPage() {
   
   // ── Fetch on-chain data ───────────────────────────────────────────
   const fetchOnChainData = useCallback(async () => {
-    if (!isReady) return;
+    if (!isReady || !deploymentId) return;
+    const fetchDeploymentId = deploymentId;
     setIsLoadingOnChain(true);
 
     try {
@@ -279,6 +299,7 @@ export default function DashboardPage() {
         fetchEvents('OrderCancelled'),
         fetchEvents('OrderFilled'),
       ]);
+      if (deploymentIdRef.current !== fetchDeploymentId) return;
 
       const totalCount = totalResult.data !== null ? Number(totalResult.data) : 0;
       if (totalResult.data !== null) setTotalOrders(totalCount);
@@ -324,6 +345,7 @@ export default function DashboardPage() {
           orderPromises.push(readContract('getOrder', [i]));
         }
         const orderResults = await Promise.all(orderPromises);
+        if (deploymentIdRef.current !== fetchDeploymentId) return;
 
         orderResults.forEach((res, idx) => {
           if (!res.data) return;
@@ -407,10 +429,12 @@ export default function DashboardPage() {
             active: isActive,
             maker: String(makerRaw),
             onChain: true,
+            deploymentId: fetchDeploymentId,
           });
         });
 
       }
+      if (deploymentIdRef.current !== fetchDeploymentId) return;
       setOrders(fetchedOrders);
 
       // Decode matches only after loading their buy-order token metadata.
@@ -452,19 +476,21 @@ export default function DashboardPage() {
           });
         });
       }
+      if (deploymentIdRef.current !== fetchDeploymentId) return;
       setSettledHistory(parsedMatches.reverse());
     } catch (err) {
       console.error('Error fetching on-chain data:', err);
     } finally {
       setIsLoadingOnChain(false);
     }
-  }, [isReady, readContract, fetchEvents, chainId, contractAddress]);
+  }, [isReady, readContract, fetchEvents, chainId, contractAddress, deploymentId]);
 
   useEffect(() => {
+    if (!deploymentId) return;
     fetchOnChainData();
     const interval = setInterval(fetchOnChainData, 4000);
     return () => clearInterval(interval);
-  }, [fetchOnChainData]);
+  }, [fetchOnChainData, deploymentId]);
 
   // ── Dynamic price calculation loop based on curve formula ─────────
   useEffect(() => {
@@ -560,8 +586,16 @@ export default function DashboardPage() {
           }
           const priceRayValue = priceToRay(startPrice, baseDecimals, quoteDecimals);
           const slopeRayValue = priceToRay(slope, baseDecimals, quoteDecimals);
-          const minPriceRayValue = priceToRay(minPrice, baseDecimals, quoteDecimals);
-          const maxPriceRayValue = priceToRay(maxPrice, baseDecimals, quoteDecimals);
+          const minPriceRayValue = priceToRay(
+            normalizeOptionalPrice(minPrice),
+            baseDecimals,
+            quoteDecimals
+          );
+          const maxPriceRayValue = priceToRay(
+            normalizeOptionalPrice(maxPrice),
+            baseDecimals,
+            quoteDecimals
+          );
           if (priceRayValue <= BigInt(0)) {
             throw new Error('Starting price must be greater than zero');
           }
@@ -662,18 +696,35 @@ export default function DashboardPage() {
 
   // ── Clean up inactive orders from in-flight matching ref ──────────
   useEffect(() => {
-    const activeIds = new Set(orders.filter((o) => o.active).map((o) => o.id));
+    const activeIds = new Set(
+      orders.filter((o) => o.active && o.deploymentId === deploymentId).map((o) => o.id)
+    );
     for (const key of Array.from(inFlightMatchesRef.current)) {
       const [bId, sId] = key.split('-').map(Number);
       if (!activeIds.has(bId) || !activeIds.has(sId)) {
         inFlightMatchesRef.current.delete(key);
       }
     }
-  }, [orders]);
+  }, [orders, deploymentId]);
 
   // ── Real On-Chain Match Orders Handler ─────────────────────────────
   const handleExecuteMatch = useCallback(
     async (buyOrderId: number, sellOrderId: number) => {
+      const activeDeployment = deploymentIdRef.current;
+      const buyOrder = ordersRef.current.find((order) => order.id === buyOrderId);
+      const sellOrder = ordersRef.current.find((order) => order.id === sellOrderId);
+      if (
+        !activeDeployment ||
+        !buyOrder ||
+        !sellOrder ||
+        buyOrder.deploymentId !== activeDeployment ||
+        sellOrder.deploymentId !== activeDeployment ||
+        !buyOrder.priceEncodingSafe ||
+        !sellOrder.priceEncodingSafe
+      ) {
+        return;
+      }
+
       const pairKey = `${buyOrderId}-${sellOrderId}`;
       if (inFlightMatchesRef.current.has(pairKey)) return;
 
@@ -740,6 +791,7 @@ export default function DashboardPage() {
 
   // ── Automatic Matching Loop for Crossing Opportunities (Strictly Autonomous) ──
   useEffect(() => {
+    if (!deploymentId) return;
     if (isPaused || isSubmitting) return;
     if (matchablePairs.length === 0) return;
 
@@ -750,7 +802,7 @@ export default function DashboardPage() {
         break; // Match one pair at a time to prevent nonce collisions
       }
     }
-  }, [matchablePairs, isPaused, isSubmitting, handleExecuteMatch]);
+  }, [matchablePairs, isPaused, isSubmitting, handleExecuteMatch, deploymentId]);
 
   // ── Price Curve SVG Mini-renderer ─────────────────────────────────
   const renderPriceCurve = (order: Order) => {

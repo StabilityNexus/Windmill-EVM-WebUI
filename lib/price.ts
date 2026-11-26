@@ -46,6 +46,10 @@ function expandScientificNotation(value: string): string {
   return `${sign}${digits.slice(0, decimalIndex)}.${digits.slice(decimalIndex)}`;
 }
 
+export function normalizeOptionalPrice(value: string): string {
+  return value.trim() === '' ? '0' : value;
+}
+
 export function priceToRay(
   value: string | number,
   baseDecimals: number,
