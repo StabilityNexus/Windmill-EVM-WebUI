@@ -4,7 +4,17 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useWallet } from '@/context/WalletContext';
 import { useContract } from '@/hooks/useContract';
 import { SUPPORTED_TOKENS, getTokenAddress, getExplorerTxUrl } from '@/lib/contractConfig';
+import {
+  currentPriceRay,
+  getOrderPriceOrientation,
+  isSlopeWithinContractLimit,
+  MAX_SLOPE_RAY,
+  normalizeOptionalPrice,
+  priceFromRay,
+  priceToRay,
+} from '@/lib/price';
 import WalletModal from '@/components/wallet/WalletModal';
+import { formatUnits } from 'ethers';
 import { Zap, X, ExternalLink, RefreshCw, Layers, CheckCircle2 } from 'lucide-react';
 
 interface Order {
@@ -20,11 +30,20 @@ interface Order {
   slope: number;
   minPrice: number;
   maxPrice: number;
+  startPriceRaw: bigint;
+  currentPriceRaw: bigint;
+  slopeRaw: bigint;
+  minPriceRaw: bigint;
+  maxPriceRaw: bigint;
+  baseDecimals: number;
+  quoteDecimals: number;
+  priceEncodingSafe: boolean;
   expiry: number;
   createdAt: number;
   active: boolean;
   maker: string;
   onChain: boolean;
+  deploymentId: string | null;
 }
 
 interface SettledMatch {
@@ -39,34 +58,16 @@ interface SettledMatch {
   keeper: string;
 }
 
-function parseRay(raw: unknown): number {
-  if (raw === undefined || raw === null || raw === '') return 0;
+function getPriceEncodingV2StartOrderId(chainId: number, address: string): number | null {
+  const configuredDeployments = process.env.NEXT_PUBLIC_PRICE_ENCODING_V2_DEPLOYMENTS;
+  if (!configuredDeployments) return null;
   try {
-    const str = typeof raw === 'object' && raw !== null ? raw.toString() : String(raw);
-    const big = BigInt(str);
-    if (big === BigInt(0)) return 0;
-    const sign = big < BigInt(0) ? BigInt(-1) : BigInt(1);
-    const absBig = big < BigInt(0) ? -big : big;
-    const scale18 = BigInt('1000000000000000000');
-    const whole = absBig / scale18;
-    const rem = absBig % scale18;
-    const num = (Number(whole) / 1e9 + Number(rem) / 1e27) * Number(sign);
-    return Math.round(num * 1e8) / 1e8;
+    const cutoffs = JSON.parse(configuredDeployments) as Record<string, unknown>;
+    const cutoff = Number(cutoffs[`${chainId}:${address.toLowerCase()}`]);
+    return Number.isSafeInteger(cutoff) && cutoff > 0 ? cutoff : null;
   } catch {
-    return Number(raw) / 1e27 || 0;
+    return null;
   }
-}
-
-function toRayString(val: number): string {
-  if (!val || isNaN(val)) return '0';
-  const isNeg = val < 0;
-  const absVal = Math.abs(val);
-  const str = absVal.toFixed(9);
-  const [intPart, decPart] = str.split('.');
-  const scale27 = BigInt('1000000000000000000000000000');
-  const scale18 = BigInt('1000000000000000000');
-  const combined = BigInt(intPart) * scale27 + BigInt(decPart) * scale18;
-  return (isNeg ? '-' : '') + combined.toString();
 }
 
 function formatPrice(val: number): string {
@@ -75,19 +76,43 @@ function formatPrice(val: number): string {
   return rounded.toString();
 }
 
+function getPriceUnit(isBuy: boolean, tokenInSymbol: string, tokenOutSymbol: string): string {
+  return isBuy
+    ? `${tokenOutSymbol}/${tokenInSymbol}`
+    : `${tokenInSymbol}/${tokenOutSymbol}`;
+}
+
+function setSlopeDirection(value: string, negative: boolean): string {
+  const magnitude = value.trim().replace(/^[+-]/, '');
+  if (!magnitude) return value;
+  return negative ? `-${magnitude}` : magnitude;
+}
+
+function formatOrderPrice(order: Order, value: number): string {
+  return `${formatPrice(value)} ${getPriceUnit(
+    order.type === 'Buy',
+    order.tokenInSymbol,
+    order.tokenOutSymbol
+  )}`;
+}
+
 export default function DashboardPage() {
   const { isConnected, setWalletModalOpen, fullAddress, chainId, network } = useWallet();
   const { contractAddress, rpcUrl, writeContract, waitForReceipt, readContract, readERC20, approveERC20, fetchEvents, isReady } = useContract();
+  const deploymentId = useMemo(
+    () => (chainId && contractAddress ? `${chainId}:${contractAddress.toLowerCase()}` : null),
+    [chainId, contractAddress]
+  );
 
   // ── Form State ────────────────────────────────────────────────────
   const [orderType, setOrderType] = useState<'Buy' | 'Sell'>('Buy');
   const [tokenIn, setTokenIn] = useState('WETH');
   const [tokenOut, setTokenOut] = useState('USDC');
   const [amount, setAmount] = useState<number>(1);
-  const [startPrice, setStartPrice] = useState<number>(3000);
-  const [slope, setSlope] = useState<number>(-0.2);
-  const [minPrice, setMinPrice] = useState<number>(0);
-  const [maxPrice, setMaxPrice] = useState<number>(0);
+  const [startPrice, setStartPrice] = useState('3000');
+  const [slope, setSlope] = useState('-0.2');
+  const [minPrice, setMinPrice] = useState('0');
+  const [maxPrice, setMaxPrice] = useState('0');
   const [expiry, setExpiry] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txStatus, setTxStatus] = useState<string | null>(null);
@@ -112,12 +137,43 @@ export default function DashboardPage() {
   // Auto-match is permanently and strictly active
   const [matchingPairKeys, setMatchingPairKeys] = useState<Set<string>>(new Set());
   const inFlightMatchesRef = useRef<Set<string>>(new Set());
+  const ordersRef = useRef<Order[]>([]);
+  ordersRef.current = orders;
+  const deploymentIdRef = useRef<string | null>(deploymentId);
+  deploymentIdRef.current = deploymentId;
+
+  useEffect(() => {
+    setOrders([]);
+    setSettledHistory([]);
+    setTotalOrders(null);
+    setIsPaused(false);
+    setMatchingPairKeys(new Set());
+    inFlightMatchesRef.current.clear();
+  }, [deploymentId]);
 
   // ── Available tokens for current chain ────────────────────────────
   const availableTokens = useMemo(() => {
     if (!chainId) return SUPPORTED_TOKENS;
     return SUPPORTED_TOKENS.filter((t) => t.addresses[chainId]);
   }, [chainId]);
+  const formPriceUnit = getPriceUnit(orderType === 'Buy', tokenIn, tokenOut);
+  const formTokenInMeta = SUPPORTED_TOKENS.find((token) => token.symbol === tokenIn);
+  const formTokenOutMeta = SUPPORTED_TOKENS.find((token) => token.symbol === tokenOut);
+  const formPriceOrientation =
+    formTokenInMeta && formTokenOutMeta
+      ? getOrderPriceOrientation(
+          orderType === 'Buy',
+          formTokenInMeta.decimals,
+          formTokenOutMeta.decimals
+        )
+      : null;
+  const formMaxSlope = formPriceOrientation
+    ? priceFromRay(
+        MAX_SLOPE_RAY,
+        formPriceOrientation.baseDecimals,
+        formPriceOrientation.quoteDecimals
+      )
+    : undefined;
 
   // ── Filtered Orders ───────────────────────────────────────────────
   const myActiveOrders = useMemo(() => {
@@ -190,8 +246,8 @@ export default function DashboardPage() {
   // ── Persistent refs to prevent state overwrites on polling ──────
 
   const allActiveOrders = useMemo(() => {
-    return orders.filter((o) => o.active);
-  }, [orders]);
+    return orders.filter((o) => o.active && o.deploymentId === deploymentId);
+  }, [orders, deploymentId]);
 
   // Detect Matchable Crossover Pairs on-chain
   const matchablePairs = useMemo(() => {
@@ -207,8 +263,14 @@ export default function DashboardPage() {
           buy.tokenOut.toLowerCase() === sell.tokenIn.toLowerCase()
         ) {
           // Cannot match self
-          if (buy.maker.toLowerCase() !== sell.maker.toLowerCase()) {
-            if (buy.currentPrice >= sell.currentPrice) {
+          if (
+            buy.priceEncodingSafe &&
+            sell.priceEncodingSafe &&
+            buy.currentPriceRaw > BigInt(0) &&
+            sell.currentPriceRaw > BigInt(0) &&
+            buy.maker.toLowerCase() !== sell.maker.toLowerCase()
+          ) {
+            if (buy.currentPriceRaw >= sell.currentPriceRaw) {
               pairs.push({ buy, sell });
             }
           }
@@ -221,10 +283,15 @@ export default function DashboardPage() {
   
   // ── Fetch on-chain data ───────────────────────────────────────────
   const fetchOnChainData = useCallback(async () => {
-    if (!isReady) return;
+    if (!isReady || !deploymentId) return;
+    const fetchDeploymentId = deploymentId;
     setIsLoadingOnChain(true);
 
     try {
+      const priceEncodingStartOrderId =
+        chainId && contractAddress
+          ? getPriceEncodingV2StartOrderId(chainId, contractAddress)
+          : null;
       const [totalResult, pausedResult, matchedLogs, cancelledLogs, filledLogs] = await Promise.all([
         readContract('totalOrders'),
         readContract('paused'),
@@ -232,6 +299,7 @@ export default function DashboardPage() {
         fetchEvents('OrderCancelled'),
         fetchEvents('OrderFilled'),
       ]);
+      if (deploymentIdRef.current !== fetchDeploymentId) return;
 
       const totalCount = totalResult.data !== null ? Number(totalResult.data) : 0;
       if (totalResult.data !== null) setTotalOrders(totalCount);
@@ -269,45 +337,15 @@ export default function DashboardPage() {
         });
       }
 
-      // Build Settled Matches History purely from real on-chain OrderMatched events
-      const parsedMatches: SettledMatch[] = [];
-      if (matchedLogs.data && Array.isArray(matchedLogs.data)) {
-        matchedLogs.data.forEach((log: unknown) => {
-          const l = log as { args?: Record<string, unknown> | unknown[]; transactionHash?: string };
-          const args = l.args || {};
-          const buyId = Number((args as Record<string, unknown>).buyOrderId ?? (args as unknown[])[0] ?? 0);
-          const sellId = Number((args as Record<string, unknown>).sellOrderId ?? (args as unknown[])[1] ?? 0);
-          const keeper = String((args as Record<string, unknown>).keeper ?? (args as unknown[])[2] ?? '');
-          const priceRaw = (args as Record<string, unknown>).settlementPrice ?? (args as unknown[])[3] ?? 0;
-          const qtyRaw = (args as Record<string, unknown>).executedQuantity ?? (args as unknown[])[4] ?? 0;
-
-          const priceVal = parseRay(priceRaw);
-          const qtyNum = Number(qtyRaw);
-          const amountFormatted = qtyNum > 1e10 ? (qtyNum / 1e18).toFixed(4) : (qtyNum / 1e6).toFixed(2);
-
-          parsedMatches.push({
-            id: buyId,
-            buyOrderId: buyId,
-            sellOrderId: sellId,
-            pair: `Buy #${buyId} ↔ Sell #${sellId}`,
-            amount: amountFormatted,
-            price: `$${priceVal > 0 ? formatPrice(priceVal) : '3000'}`,
-            age: 'On-Chain Settled',
-            txHash: l.transactionHash || '',
-            keeper: keeper ? `${keeper.slice(0, 6)}...${keeper.slice(-4)}` : 'Keeper',
-          });
-        });
-      }
-      setSettledHistory(parsedMatches.reverse());
-
       // Fetch on-chain orders 1..totalCount
+      const fetchedOrders: Order[] = [];
       if (totalCount > 0) {
         const orderPromises = [];
         for (let i = 1; i <= totalCount; i++) {
           orderPromises.push(readContract('getOrder', [i]));
         }
         const orderResults = await Promise.all(orderPromises);
-        const fetchedOrders: Order[] = [];
+        if (deploymentIdRef.current !== fetchDeploymentId) return;
 
         orderResults.forEach((res, idx) => {
           if (!res.data) return;
@@ -331,57 +369,128 @@ export default function DashboardPage() {
           const tokenOutMeta = SUPPORTED_TOKENS.find(
             (t) => chainId && t.addresses[chainId]?.toLowerCase() === tokenOutAddr.toLowerCase()
           );
+          if (!tokenInMeta || !tokenOutMeta) return;
 
-          const decimals = tokenInMeta?.decimals || (isBuy ? 18 : 6);
+          const tokenInDecimals = tokenInMeta.decimals;
+          const tokenOutDecimals = tokenOutMeta.decimals;
+          const { baseDecimals, quoteDecimals } = getOrderPriceOrientation(
+            isBuy,
+            tokenInDecimals,
+            tokenOutDecimals
+          );
           const amountInRaw = (o as Record<string, unknown>).amountIn ?? (o as unknown[])[6] ?? 0;
-          const amt = Number(amountInRaw.toString()) / 10 ** decimals;
-          const startPriceRaw = (o as Record<string, unknown>).startPrice ?? (o as unknown[])[8] ?? 0;
-          const startP = parseRay(startPriceRaw);
-          const slopeRaw = (o as Record<string, unknown>).slope ?? (o as unknown[])[9] ?? 0;
-          const slopeP = parseRay(slopeRaw);
-          const minPriceRaw = (o as Record<string, unknown>).minPrice ?? (o as unknown[])[10] ?? 0;
-          const minP = parseRay(minPriceRaw);
-          const maxPriceRaw = (o as Record<string, unknown>).maxPrice ?? (o as unknown[])[11] ?? 0;
-          const maxP = parseRay(maxPriceRaw);
+          const amt = Number(amountInRaw.toString()) / 10 ** tokenInDecimals;
+          const startPriceRaw = BigInt(
+            String((o as Record<string, unknown>).startPrice ?? (o as unknown[])[8] ?? 0)
+          );
+          const slopeRaw = BigInt(
+            String((o as Record<string, unknown>).slope ?? (o as unknown[])[9] ?? 0)
+          );
+          const minPriceRaw = BigInt(
+            String((o as Record<string, unknown>).minPrice ?? (o as unknown[])[10] ?? 0)
+          );
+          const maxPriceRaw = BigInt(
+            String((o as Record<string, unknown>).maxPrice ?? (o as unknown[])[11] ?? 0)
+          );
+          const startP = priceFromRay(startPriceRaw, baseDecimals, quoteDecimals);
+          const slopeP = priceFromRay(slopeRaw, baseDecimals, quoteDecimals);
+          const minP = priceFromRay(minPriceRaw, baseDecimals, quoteDecimals);
+          const maxP = priceFromRay(maxPriceRaw, baseDecimals, quoteDecimals);
           const createdAtRaw = (o as Record<string, unknown>).createdAt ?? (o as unknown[])[12] ?? 0;
           const expiryRaw = (o as Record<string, unknown>).expiry ?? (o as unknown[])[13] ?? 0;
           const makerRaw = (o as Record<string, unknown>).maker ?? (o as unknown[])[1] ?? '';
+          const priceEncodingSafe =
+            baseDecimals === quoteDecimals ||
+            (priceEncodingStartOrderId !== null && id >= priceEncodingStartOrderId);
 
           fetchedOrders.push({
             id,
             type: isBuy ? 'Buy' : 'Sell',
             tokenIn: tokenInAddr,
             tokenOut: tokenOutAddr,
-            tokenInSymbol: tokenInMeta?.symbol || (isBuy ? 'WETH' : 'USDC'),
-            tokenOutSymbol: tokenOutMeta?.symbol || (isBuy ? 'USDC' : 'WETH'),
-            amount: amt > 0 ? amt : isBuy ? 1 : 3000,
+            tokenInSymbol: tokenInMeta.symbol,
+            tokenOutSymbol: tokenOutMeta.symbol,
+            amount: amt,
             startPrice: startP,
             currentPrice: startP,
             slope: slopeP,
             minPrice: minP,
             maxPrice: maxP,
+            startPriceRaw,
+            currentPriceRaw: startPriceRaw,
+            slopeRaw,
+            minPriceRaw,
+            maxPriceRaw,
+            baseDecimals,
+            quoteDecimals,
+            priceEncodingSafe,
             expiry: Number(expiryRaw.toString()),
             createdAt: Number(createdAtRaw.toString() || Date.now() / 1000) * 1000,
             active: isActive,
             maker: String(makerRaw),
             onChain: true,
+            deploymentId: fetchDeploymentId,
           });
         });
 
-        setOrders(fetchedOrders);
       }
+      if (deploymentIdRef.current !== fetchDeploymentId) return;
+      setOrders(fetchedOrders);
+
+      // Decode matches only after loading their buy-order token metadata.
+      const ordersById = new Map(fetchedOrders.map((order) => [order.id, order]));
+      const parsedMatches: SettledMatch[] = [];
+      if (matchedLogs.data && Array.isArray(matchedLogs.data)) {
+        matchedLogs.data.forEach((log: unknown) => {
+          const l = log as { args?: Record<string, unknown> | unknown[]; transactionHash?: string };
+          const args = l.args || {};
+          const buyId = Number((args as Record<string, unknown>).buyOrderId ?? (args as unknown[])[0] ?? 0);
+          const sellId = Number((args as Record<string, unknown>).sellOrderId ?? (args as unknown[])[1] ?? 0);
+          const keeper = String((args as Record<string, unknown>).keeper ?? (args as unknown[])[2] ?? '');
+          const priceRaw = (args as Record<string, unknown>).settlementPrice ?? (args as unknown[])[3] ?? 0;
+          const qtyRaw = (args as Record<string, unknown>).executedQuantity ?? (args as unknown[])[4] ?? 0;
+          const buyOrder = ordersById.get(buyId);
+          if (!buyOrder) return;
+
+          const priceVal = priceFromRay(
+            priceRaw,
+            buyOrder.baseDecimals,
+            buyOrder.quoteDecimals
+          );
+          const amountFormatted = formatUnits(BigInt(String(qtyRaw)), buyOrder.quoteDecimals);
+
+          parsedMatches.push({
+            id: buyId,
+            buyOrderId: buyId,
+            sellOrderId: sellId,
+            pair: `Buy #${buyId} ↔ Sell #${sellId}`,
+            amount: `${amountFormatted} ${buyOrder.tokenOutSymbol}`,
+            price: `${formatPrice(priceVal)} ${getPriceUnit(
+              true,
+              buyOrder.tokenInSymbol,
+              buyOrder.tokenOutSymbol
+            )}`,
+            age: 'On-Chain Settled',
+            txHash: l.transactionHash || '',
+            keeper: keeper ? `${keeper.slice(0, 6)}...${keeper.slice(-4)}` : 'Keeper',
+          });
+        });
+      }
+      if (deploymentIdRef.current !== fetchDeploymentId) return;
+      setSettledHistory(parsedMatches.reverse());
     } catch (err) {
       console.error('Error fetching on-chain data:', err);
     } finally {
       setIsLoadingOnChain(false);
     }
-  }, [isReady, readContract, fetchEvents, chainId]);
+  }, [isReady, readContract, fetchEvents, chainId, contractAddress, deploymentId]);
 
   useEffect(() => {
+    if (!deploymentId) return;
     fetchOnChainData();
     const interval = setInterval(fetchOnChainData, 4000);
     return () => clearInterval(interval);
-  }, [fetchOnChainData]);
+  }, [fetchOnChainData, deploymentId]);
 
   // ── Dynamic price calculation loop based on curve formula ─────────
   useEffect(() => {
@@ -389,19 +498,26 @@ export default function DashboardPage() {
       setOrders((prevOrders) =>
         prevOrders.map((ord) => {
           if (!ord.active) return ord;
-          if (Math.abs(ord.slope) < 1e-9) {
-            if (ord.currentPrice !== ord.startPrice) {
-              return { ...ord, currentPrice: ord.startPrice };
-            }
-            return ord;
-          }
-          const deltaT = (Date.now() - ord.createdAt) / 1000;
-          let calculated = ord.startPrice + ord.slope * deltaT;
-          if (ord.minPrice > 0) calculated = Math.max(ord.minPrice, calculated);
-          if (ord.maxPrice > 0) calculated = Math.min(ord.maxPrice, calculated);
-          const currentPrice = Math.max(0.01, Math.round(calculated * 1e4) / 1e4);
-          if (ord.currentPrice === currentPrice) return ord;
-          return { ...ord, currentPrice };
+          const elapsedSeconds = BigInt(
+            Math.max(0, Math.floor((Date.now() - ord.createdAt) / 1000))
+          );
+          const nextPriceRaw = currentPriceRay(
+            ord.startPriceRaw,
+            ord.slopeRaw,
+            ord.minPriceRaw,
+            ord.maxPriceRaw,
+            elapsedSeconds
+          );
+          if (ord.currentPriceRaw === nextPriceRaw) return ord;
+          return {
+            ...ord,
+            currentPriceRaw: nextPriceRaw,
+            currentPrice: priceFromRay(
+              nextPriceRaw,
+              ord.baseDecimals,
+              ord.quoteDecimals
+            ),
+          };
         })
       );
     }, 1000);
@@ -434,8 +550,12 @@ export default function DashboardPage() {
 
       if (tokenInAddr && tokenOutAddr) {
         try {
-          const tokenMeta = SUPPORTED_TOKENS.find((t) => t.symbol === tokenIn);
-          const decimals = tokenMeta?.decimals || 18;
+          const tokenInMeta = SUPPORTED_TOKENS.find((token) => token.symbol === tokenIn);
+          const tokenOutMeta = SUPPORTED_TOKENS.find((token) => token.symbol === tokenOut);
+          if (!tokenInMeta || !tokenOutMeta) {
+            throw new Error('Token metadata is unavailable for this pair');
+          }
+          const decimals = tokenInMeta.decimals;
           const amountWei = BigInt(Math.floor(amount * 10 ** decimals)).toString();
 
           // ── Pre-validate on-chain ERC-20 balance ──────────────────────
@@ -450,11 +570,51 @@ export default function DashboardPage() {
             return;
           }
 
-          // Price in RAY (1e27)
-          const priceRay = toRayString(startPrice);
-          const slopeRay = toRayString(slope);
-          const minPriceRay = minPrice > 0 ? toRayString(minPrice) : '0';
-          const maxPriceRay = maxPrice > 0 ? toRayString(maxPrice) : '0';
+          const { baseDecimals, quoteDecimals } = getOrderPriceOrientation(
+            orderType === 'Buy',
+            tokenInMeta.decimals,
+            tokenOutMeta.decimals
+          );
+          if (
+            baseDecimals !== quoteDecimals &&
+            (!contractAddress ||
+              getPriceEncodingV2StartOrderId(chainId, contractAddress) === null)
+          ) {
+            throw new Error(
+              'Mixed-decimal order creation is paused until this deployment completes the price encoding migration'
+            );
+          }
+          const priceRayValue = priceToRay(startPrice, baseDecimals, quoteDecimals);
+          const slopeRayValue = priceToRay(slope, baseDecimals, quoteDecimals);
+          const minPriceRayValue = priceToRay(
+            normalizeOptionalPrice(minPrice),
+            baseDecimals,
+            quoteDecimals
+          );
+          const maxPriceRayValue = priceToRay(
+            normalizeOptionalPrice(maxPrice),
+            baseDecimals,
+            quoteDecimals
+          );
+          if (priceRayValue <= BigInt(0)) {
+            throw new Error('Starting price must be greater than zero');
+          }
+          if (!isSlopeWithinContractLimit(slopeRayValue)) {
+            throw new Error(`Slope exceeds the contract limit for ${formPriceUnit}`);
+          }
+          if (minPriceRayValue < BigInt(0) || maxPriceRayValue < BigInt(0)) {
+            throw new Error('Price bounds cannot be negative');
+          }
+          if (
+            maxPriceRayValue !== BigInt(0) &&
+            maxPriceRayValue < minPriceRayValue
+          ) {
+            throw new Error('Maximum price cannot be lower than minimum price');
+          }
+          const priceRay = priceRayValue.toString();
+          const slopeRay = slopeRayValue.toString();
+          const minPriceRay = minPriceRayValue.toString();
+          const maxPriceRay = maxPriceRayValue.toString();
           const expiryTs = expiry ? Math.floor(new Date(expiry).getTime() / 1000).toString() : '0';
 
           // Check token allowance
@@ -550,18 +710,35 @@ export default function DashboardPage() {
 
   // ── Clean up inactive orders from in-flight matching ref ──────────
   useEffect(() => {
-    const activeIds = new Set(orders.filter((o) => o.active).map((o) => o.id));
+    const activeIds = new Set(
+      orders.filter((o) => o.active && o.deploymentId === deploymentId).map((o) => o.id)
+    );
     for (const key of Array.from(inFlightMatchesRef.current)) {
       const [bId, sId] = key.split('-').map(Number);
       if (!activeIds.has(bId) || !activeIds.has(sId)) {
         inFlightMatchesRef.current.delete(key);
       }
     }
-  }, [orders]);
+  }, [orders, deploymentId]);
 
   // ── Real On-Chain Match Orders Handler ─────────────────────────────
   const handleExecuteMatch = useCallback(
     async (buyOrderId: number, sellOrderId: number) => {
+      const activeDeployment = deploymentIdRef.current;
+      const buyOrder = ordersRef.current.find((order) => order.id === buyOrderId);
+      const sellOrder = ordersRef.current.find((order) => order.id === sellOrderId);
+      if (
+        !activeDeployment ||
+        !buyOrder ||
+        !sellOrder ||
+        buyOrder.deploymentId !== activeDeployment ||
+        sellOrder.deploymentId !== activeDeployment ||
+        !buyOrder.priceEncodingSafe ||
+        !sellOrder.priceEncodingSafe
+      ) {
+        return;
+      }
+
       const pairKey = `${buyOrderId}-${sellOrderId}`;
       if (inFlightMatchesRef.current.has(pairKey)) return;
 
@@ -628,6 +805,7 @@ export default function DashboardPage() {
 
   // ── Automatic Matching Loop for Crossing Opportunities (Strictly Autonomous) ──
   useEffect(() => {
+    if (!deploymentId) return;
     if (isPaused || isSubmitting) return;
     if (matchablePairs.length === 0) return;
 
@@ -638,7 +816,7 @@ export default function DashboardPage() {
         break; // Match one pair at a time to prevent nonce collisions
       }
     }
-  }, [matchablePairs, isPaused, isSubmitting, handleExecuteMatch]);
+  }, [matchablePairs, isPaused, isSubmitting, handleExecuteMatch, deploymentId]);
 
   // ── Price Curve SVG Mini-renderer ─────────────────────────────────
   const renderPriceCurve = (order: Order) => {
@@ -775,7 +953,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => {
                     setOrderType('Buy');
-                    if (slope > 0) setSlope(-Math.abs(slope));
+                    setSlope((value) => setSlopeDirection(value, true));
                   }}
                   className={`flex-1 py-2 text-center rounded-full text-[10px] font-bold transition-all cursor-pointer ${
                     orderType === 'Buy'
@@ -789,7 +967,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => {
                     setOrderType('Sell');
-                    if (slope < 0) setSlope(Math.abs(slope));
+                    setSlope((value) => setSlopeDirection(value, false));
                   }}
                   className={`flex-1 py-2 text-center rounded-full text-[10px] font-bold transition-all cursor-pointer ${
                     orderType === 'Sell'
@@ -894,16 +1072,16 @@ export default function DashboardPage() {
               {/* Starting Price */}
               <div className="flex flex-col gap-1">
                 <label htmlFor="start-price-input" className="text-[9px] text-neutral-400 dark:text-neutral-500">
-                  Starting Price ($)
+                  Starting Price ({formPriceUnit})
                 </label>
                 <input
                   id="start-price-input"
                   type="number"
-                  step="0.01"
-                  min="0.01"
+                  step="any"
+                  min="0"
                   required
                   value={startPrice}
-                  onChange={(e) => setStartPrice(Number(e.target.value))}
+                  onChange={(e) => setStartPrice(e.target.value)}
                   className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                   placeholder="3000"
                 />
@@ -912,21 +1090,28 @@ export default function DashboardPage() {
               {/* Price Slope */}
               <div className="flex flex-col gap-1">
                 <label htmlFor="slope-input" className="text-[9px] text-neutral-400 dark:text-neutral-500">
-                  Slope ($ / second)
+                  Slope ({formPriceUnit} / second)
                 </label>
                 <input
                   id="slope-input"
                   type="number"
-                  step="0.001"
+                  step="any"
+                  min={formMaxSlope === undefined ? undefined : -formMaxSlope}
+                  max={formMaxSlope}
                   required
                   value={slope}
-                  onChange={(e) => setSlope(Number(e.target.value))}
+                  onChange={(e) => setSlope(e.target.value)}
                   className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                   placeholder="-0.2"
                 />
                 <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-normal normal-case mt-0.5">
                   Negative for Buys (descending bid), positive for Sells (increasing ask).
                 </span>
+                {formMaxSlope !== undefined && (
+                  <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-normal normal-case">
+                    Contract limit: ±{formMaxSlope.toExponential(3)} {formPriceUnit} / second.
+                  </span>
+                )}
               </div>
 
               {/* Min / Max Price */}
@@ -938,9 +1123,10 @@ export default function DashboardPage() {
                   <input
                     id="min-price-input"
                     type="number"
-                    step="0.01"
+                    step="any"
+                    min="0"
                     value={minPrice}
-                    onChange={(e) => setMinPrice(Number(e.target.value))}
+                    onChange={(e) => setMinPrice(e.target.value)}
                     className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                     placeholder="0"
                   />
@@ -952,9 +1138,10 @@ export default function DashboardPage() {
                   <input
                     id="max-price-input"
                     type="number"
-                    step="0.01"
+                    step="any"
+                    min="0"
                     value={maxPrice}
-                    onChange={(e) => setMaxPrice(Number(e.target.value))}
+                    onChange={(e) => setMaxPrice(e.target.value)}
                     className="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2.5 rounded-xl text-black dark:text-white font-normal focus:outline-hidden"
                     placeholder="0"
                   />
@@ -1036,9 +1223,9 @@ export default function DashboardPage() {
                         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-2xl bg-white/80 dark:bg-neutral-900/80 border border-emerald-500/20"
                       >
                         <div className="text-xs">
-                          <span className="font-bold text-black dark:text-white">Buy #{buy.id}</span> (${formatPrice(buy.currentPrice)})
+                          <span className="font-bold text-black dark:text-white">Buy #{buy.id}</span> ({formatOrderPrice(buy, buy.currentPrice)})
                           <span className="text-neutral-400 mx-2">↔</span>
-                          <span className="font-bold text-black dark:text-white">Sell #{sell.id}</span> (${formatPrice(sell.currentPrice)})
+                          <span className="font-bold text-black dark:text-white">Sell #{sell.id}</span> ({formatOrderPrice(sell, sell.currentPrice)})
                           <div className="text-[10px] text-neutral-500 mt-0.5 flex items-center gap-1.5">
                             <span>Cross condition satisfied: Buy Price &ge; Sell Price</span>
                             <span className="inline-flex items-center text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -1136,6 +1323,14 @@ export default function DashboardPage() {
                             >
                               {order.type}
                             </span>
+                            {!order.priceEncodingSafe && (
+                              <span
+                                className="text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                                title="Configure NEXT_PUBLIC_PRICE_ENCODING_V2_DEPLOYMENTS after legacy orders are cancelled"
+                              >
+                                Matching paused: legacy price encoding
+                              </span>
+                            )}
                             <span className="text-[9px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-mono">
                               Maker: {order.maker.slice(0, 6)}...{order.maker.slice(-4)}
                             </span>
@@ -1147,25 +1342,26 @@ export default function DashboardPage() {
                           <div className="flex flex-col gap-0.5 text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                             <div className="flex items-center gap-4 flex-wrap">
                               <span>
-                                Start: <span className="font-semibold text-black dark:text-white">${formatPrice(order.startPrice)}</span>
+                                Start: <span className="font-semibold text-black dark:text-white">{formatOrderPrice(order, order.startPrice)}</span>
                               </span>
                               <span>
                                 Slope:{' '}
                                 <span className="font-semibold text-black dark:text-white font-mono">
-                                  {order.slope > 0 ? `+${formatPrice(order.slope)}` : formatPrice(order.slope)}/s
+                                  {order.slope > 0 ? `+${formatPrice(order.slope)}` : formatPrice(order.slope)}{' '}
+                                  {getPriceUnit(order.type === 'Buy', order.tokenInSymbol, order.tokenOutSymbol)}/s
                                 </span>
                               </span>
                               {(order.minPrice > 0 || order.maxPrice > 0) && (
                                 <>
-                                  {order.minPrice > 0 && <span>Min: ${formatPrice(order.minPrice)}</span>}
-                                  {order.maxPrice > 0 && <span>Max: ${formatPrice(order.maxPrice)}</span>}
+                                  {order.minPrice > 0 && <span>Min: {formatOrderPrice(order, order.minPrice)}</span>}
+                                  {order.maxPrice > 0 && <span>Max: {formatOrderPrice(order, order.maxPrice)}</span>}
                                 </>
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-1.5">
                               <span className="text-neutral-500 dark:text-neutral-400">Current Computed Price:</span>
                               <span className="text-black dark:text-white font-mono font-bold text-sm bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">
-                                ${formatPrice(order.currentPrice)}
+                                {formatOrderPrice(order, order.currentPrice)}
                               </span>
                             </div>
                           </div>

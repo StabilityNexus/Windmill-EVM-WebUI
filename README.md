@@ -111,6 +111,7 @@ are required.
 ```bash
 npm run build      # production build
 npm run lint       # ESLint
+npm test           # unit tests
 npx tsc --noEmit   # TypeScript type-check
 ```
 Access the application at [http://localhost:3000](http://localhost:3000).
@@ -120,9 +121,18 @@ Access the application at [http://localhost:3000](http://localhost:3000).
 ### Test
 
 ```bash
-# This repo is a frontend; end-to-end checks run through build + lint.
-# Contract logic tests live in Windmill-EVM-Contracts (forge test).
+npm test
 ```
+
+### Price encoding migration
+
+Mixed-decimal pairs use decimal-aware RAY prices. Before enabling automatic matching on an existing
+deployment, cancel its legacy mixed-decimal orders and set
+`NEXT_PUBLIC_PRICE_ENCODING_V2_DEPLOYMENTS` to a JSON map from each deployment to the first order ID
+created with the corrected encoding, for example
+`{"11155111:0xlowercasecontractaddress": 1}`. Until a chain-and-contract entry is configured, the
+dashboard blocks new mixed-decimal orders and keeps automatic matching paused for existing ones.
+Equal-decimal pairs are unaffected.
 
 ---
 
